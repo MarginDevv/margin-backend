@@ -1,0 +1,189 @@
+"""Order / OrderItem repository with analytics queries."""
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from decimal import Decimal
+from typing import Any
+
+from sqlalchemy import Numeric, and_, cast, delete, extract, func, select
+from sqlalchemy.dialects.postgresql import insert
+
+from app.models.menu_item import MenuItem
+from app.models.order import Order, OrderItem
+from app.repositories.base import BaseRepository
+
+
+class OrderRepository(BaseRepository[Order]):
+    model = Order
+
+    async def get_by_iiko_id(
+        self, restaurant_id: uuid.UUID, iiko_order_id: str
+    ) -> Order | None:
+        stmt = select(Order).where(
+            Order.restaurant_id == restaurant_id,
+            Order.iiko_order_id == iiko_order_id,
+        )
+        return await self.session.scalar(stmt)
+
+    async def upsert_order(self, row: dict[str, Any]) -> uuid.UUID:
+        """Upsert order header, return its id."""
+        stmt = insert(Order).values(row)
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_order_iiko",
+            set_={
+                "closed_at": stmt.excluded.closed_at,
+                "status": stmt.excluded.status,
+                "guests_count": stmt.excluded.guests_count,
+                "waiter_name": stmt.excluded.waiter_name,
+                "gross_revenue": stmt.excluded.gross_revenue,
+                "discount_amount": stmt.excluded.discount_amount,
+                "net_revenue": stmt.excluded.net_revenue,
+                "total_food_cost": stmt.excluded.total_food_cost,
+                "profit": stmt.excluded.profit,
+            },
+        ).returning(Order.id)
+        result = await self.session.execute(stmt)
+        order_id = result.scalar_one()
+        return order_id
+
+    async def replace_items(self, order_id: uuid.UUID, items: list[dict[str, Any]]) -> None:
+        await self.session.execute(delete(OrderItem).where(OrderItem.order_id == order_id))
+        if items:
+            self.session.add_all([OrderItem(order_id=order_id, **i) for i in items])
+        await self.session.flush()
+
+    # ----- Analytics -----
+
+    async def kpi_summary(
+        self, restaurant_id: uuid.UUID, start_utc: datetime, end_utc: datetime
+    ) -> dict[str, Any]:
+        stmt = select(
+            func.count(Order.id).label("orders_count"),
+            func.coalesce(func.sum(Order.guests_count), 0).label("guests_count"),
+            func.coalesce(func.sum(Order.gross_revenue), 0).label("gross_revenue"),
+            func.coalesce(func.sum(Order.net_revenue), 0).label("net_revenue"),
+            func.coalesce(func.sum(Order.total_food_cost), 0).label("total_food_cost"),
+            func.coalesce(func.sum(Order.profit), 0).label("profit"),
+        ).where(
+            Order.restaurant_id == restaurant_id,
+            Order.closed_at.is_not(None),
+            Order.closed_at >= start_utc,
+            Order.closed_at < end_utc,
+        )
+        row = (await self.session.execute(stmt)).one()
+        return dict(row._mapping)
+
+    async def by_hour(
+        self, restaurant_id: uuid.UUID, start_utc: datetime, end_utc: datetime, tz: str
+    ) -> list[dict[str, Any]]:
+        local = func.timezone(tz, Order.closed_at)
+        hour_col = cast(extract("hour", local), Numeric)
+        stmt = (
+            select(
+                hour_col.label("hour"),
+                func.count(Order.id).label("orders_count"),
+                func.coalesce(func.sum(Order.net_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(Order.profit), 0).label("profit"),
+            )
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                Order.closed_at >= start_utc,
+                Order.closed_at < end_utc,
+            )
+            .group_by(hour_col)
+            .order_by(hour_col)
+        )
+        return [dict(r._mapping) for r in (await self.session.execute(stmt)).all()]
+
+    async def by_weekday(
+        self, restaurant_id: uuid.UUID, start_utc: datetime, end_utc: datetime, tz: str
+    ) -> list[dict[str, Any]]:
+        local = func.timezone(tz, Order.closed_at)
+        # Postgres: 0=Sun..6=Sat. Convert to 0=Mon..6=Sun.
+        pg_dow = extract("dow", local)
+        weekday = cast(((pg_dow + 6) % 7), Numeric).label("weekday")
+        stmt = (
+            select(
+                weekday,
+                func.count(Order.id).label("orders_count"),
+                func.coalesce(func.sum(Order.net_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(Order.profit), 0).label("profit"),
+            )
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                Order.closed_at >= start_utc,
+                Order.closed_at < end_utc,
+            )
+            .group_by(weekday)
+            .order_by(weekday)
+        )
+        return [dict(r._mapping) for r in (await self.session.execute(stmt)).all()]
+
+    async def by_day(
+        self, restaurant_id: uuid.UUID, start_utc: datetime, end_utc: datetime, tz: str
+    ) -> list[dict[str, Any]]:
+        day = func.date(func.timezone(tz, Order.closed_at)).label("day")
+        stmt = (
+            select(
+                day,
+                func.count(Order.id).label("orders_count"),
+                func.coalesce(func.sum(Order.net_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(Order.profit), 0).label("profit"),
+            )
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                Order.closed_at >= start_utc,
+                Order.closed_at < end_utc,
+            )
+            .group_by(day)
+            .order_by(day)
+        )
+        return [dict(r._mapping) for r in (await self.session.execute(stmt)).all()]
+
+    async def dish_performance(
+        self,
+        restaurant_id: uuid.UUID,
+        start_utc: datetime,
+        end_utc: datetime,
+        *,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        stmt = (
+            select(
+                OrderItem.menu_item_id,
+                func.coalesce(MenuItem.name, OrderItem.name_snapshot).label("name"),
+                MenuItem.category.label("category"),
+                func.coalesce(func.sum(OrderItem.quantity), 0).label("quantity"),
+                func.coalesce(func.sum(OrderItem.line_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(OrderItem.line_cost), 0).label("cost"),
+                func.coalesce(func.sum(OrderItem.line_profit), 0).label("profit"),
+            )
+            .select_from(OrderItem)
+            .join(Order, Order.id == OrderItem.order_id)
+            .outerjoin(MenuItem, MenuItem.id == OrderItem.menu_item_id)
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                and_(Order.closed_at >= start_utc, Order.closed_at < end_utc),
+            )
+            .group_by(
+                OrderItem.menu_item_id,
+                MenuItem.name,
+                OrderItem.name_snapshot,
+                MenuItem.category,
+            )
+            .order_by(func.sum(OrderItem.line_profit).desc())
+            .limit(limit)
+        )
+        rows: list[dict[str, Any]] = []
+        for r in (await self.session.execute(stmt)).all():
+            d = dict(r._mapping)
+            revenue = Decimal(str(d["revenue"]))
+            profit = Decimal(str(d["profit"]))
+            d["margin_percent"] = (profit / revenue * Decimal("100")) if revenue else Decimal("0")
+            rows.append(d)
+        return rows
