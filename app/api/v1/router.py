@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     reports,
     restaurants,
     telegram,
+    telegram_webhook,
     users,
 )
 
@@ -54,4 +55,9 @@ api_router.include_router(
     activity.router,
     prefix="/restaurants/{restaurant_id}/activity",
     tags=["activity"],
+)
+api_router.include_router(
+    telegram_webhook.router,
+    prefix="/webhooks/telegram",
+    tags=["telegram-webhook"],
 )

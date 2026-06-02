@@ -117,8 +117,17 @@ poetry run celery -A app.tasks.celery_app beat --loglevel=INFO
   `(restaurant_id, user_id, kind, for_date)` — повторные запуски не дублируют.
 - Бот команды: `/start`, `/today`, `/yesterday`, `/help`, `/unlink`. При
   нескольких ресторанах — inline-кнопки выбора.
-- Бот запускается отдельным контейнером (`docker compose up bot`) в режиме
-  long-polling — публичный URL не требуется. Webhook-режим зарезервирован.
+- **Два режима** работы, переключаются через `TELEGRAM_BOT_MODE` в env:
+  - `polling` (по умолчанию, локалка и любой деплой без публичного URL).
+    Запуск: `docker compose --profile polling up bot` — отдельный контейнер
+    держит long-polling соединение с Telegram.
+  - `webhook` (прод). Telegram сам POST-ит обновления на
+    `POST /api/v1/webhooks/telegram/{secret}` твоего API. Контейнер `bot`
+    не нужен — обновления обрабатывает `api`. Перед первым запуском один
+    раз зарегистрируй URL: `docker compose --profile webhook-setup run --rm bot-setup`.
+    Требуется задать `TELEGRAM_WEBHOOK_URL` (публичный HTTPS-origin) и
+    `TELEGRAM_WEBHOOK_SECRET` (длинная случайная строка, проверяется и в URL,
+    и в заголовке `X-Telegram-Bot-Api-Secret-Token`).
 - Все ключевые события (sync ok/fail, отчёт собран, рекомендации сгенерированы,
   изменён статус рекомендации, отправлен digest, привязан/отвязан Telegram)
   пишутся в `activity_events` и доступны через
