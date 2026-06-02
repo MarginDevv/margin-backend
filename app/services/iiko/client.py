@@ -160,6 +160,35 @@ class IikoClient:
         data = await self._request("/documents/sales/by_organizations", payload)
         return data.get("documents", [])
 
+    async def writeoffs_by_period(
+        self,
+        organization_ids: list[str],
+        date_from: datetime,
+        date_to: datetime,
+    ) -> list[dict[str, Any]]:
+        """Fetch writeoff documents for inventory-leak detection.
+
+        Endpoint: /documents/writeoffs/by_organizations
+        Response shape mirrors `sales`: { documents: [...] }, each document has
+        items[] with productId, amount, sum, etc.
+        """
+        from app.utils.datetime import iiko_dt
+
+        payload = {
+            "organizationIds": organization_ids,
+            "dateFrom": iiko_dt(date_from),
+            "dateTo": iiko_dt(date_to),
+        }
+        data = await self._request("/documents/writeoffs/by_organizations", payload)
+        return data.get("documents", [])
+
+    async def stop_list(self, organization_ids: list[str]) -> list[dict[str, Any]]:
+        """Current stop-list (out-of-stock products) for the given orgs."""
+        data = await self._request(
+            "/stop_lists", {"organizationIds": organization_ids}
+        )
+        return data.get("terminalGroupStopLists", [])
+
 
 class IikoTransientError(Exception):
     """Marker exception that should be retried."""

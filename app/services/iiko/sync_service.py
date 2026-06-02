@@ -13,11 +13,13 @@ from app.models.activity_event import ActivityKind, ActivitySeverity
 from app.repositories.integration_repo import IikoIntegrationRepository
 from app.repositories.menu_repo import MenuItemRepository
 from app.repositories.order_repo import OrderRepository
+from app.repositories.writeoff_repo import WriteoffRepository
 from app.services.activity.event_service import ActivityEventService
 from app.services.iiko.client import IikoClient
 from app.services.iiko.transformers import (
     nomenclature_to_menu_rows,
     sales_doc_to_order,
+    writeoff_doc_to_rows,
 )
 from app.utils.crypto import decrypt_str
 from app.utils.datetime import now_utc
@@ -31,6 +33,7 @@ class IikoSyncService:
         self.integrations = IikoIntegrationRepository(session)
         self.menu = MenuItemRepository(session)
         self.orders = OrderRepository(session)
+        self.writeoffs = WriteoffRepository(session)
 
     async def _build_client(self, restaurant_id: uuid.UUID) -> tuple[IikoClient, Any]:
         integration = await self.integrations.get_by_restaurant(restaurant_id)
@@ -137,6 +140,75 @@ class IikoSyncService:
                 restaurant_id,
                 ActivityKind.IIKO_SYNC_FAILED,
                 title="iiko: ошибка синхронизации заказов",
+                severity=ActivitySeverity.ERROR,
+                payload={"error": str(exc)[:1024]},
+            )
+            await self.session.commit()
+            raise
+        finally:
+            await client.aclose()
+
+    async def sync_writeoffs(
+        self,
+        restaurant_id: uuid.UUID,
+        date_from: datetime,
+        date_to: datetime,
+    ) -> int:
+        """Pull writeoff documents for the period and upsert them."""
+        client, integration = await self._build_client(restaurant_id)
+        try:
+            if not integration.organization_id:
+                orgs = await client.organizations()
+                if not orgs:
+                    raise IikoIntegrationError("iiko returned no organizations for apiLogin")
+                integration.organization_id = orgs[0]["id"]
+
+            try:
+                documents = await client.writeoffs_by_period(
+                    [integration.organization_id], date_from, date_to
+                )
+            except IikoIntegrationError as exc:
+                # Some accounts don't have writeoff API enabled — that's not
+                # fatal. Log, drop the activity event, and exit cleanly.
+                logger.warning(
+                    "iiko.writeoffs.not_available",
+                    restaurant_id=str(restaurant_id),
+                    error=str(exc),
+                )
+                await self._persist_token(integration, client)
+                await self.session.commit()
+                return 0
+
+            menu_items = await self.menu.list_for_restaurant(restaurant_id)
+            lookup = {m.iiko_product_id: m for m in menu_items}
+            processed = 0
+            for doc in documents:
+                header, items = writeoff_doc_to_rows(restaurant_id, doc, lookup)
+                if not header.get("iiko_document_id"):
+                    continue
+                writeoff_id = await self.writeoffs.upsert(header)
+                await self.writeoffs.replace_items(writeoff_id, items)
+                processed += 1
+
+            await self._persist_token(integration, client)
+            await ActivityEventService(self.session).emit(
+                restaurant_id,
+                ActivityKind.IIKO_SYNC_SUCCESS,
+                title=f"iiko: списания за период обновлены ({processed})",
+                payload={
+                    "kind": "writeoffs",
+                    "processed": processed,
+                    "date_from": date_from.isoformat(),
+                    "date_to": date_to.isoformat(),
+                },
+            )
+            await self.session.commit()
+            return processed
+        except Exception as exc:
+            await ActivityEventService(self.session).emit(
+                restaurant_id,
+                ActivityKind.IIKO_SYNC_FAILED,
+                title="iiko: ошибка синхронизации списаний",
                 severity=ActivitySeverity.ERROR,
                 payload={"error": str(exc)[:1024]},
             )
