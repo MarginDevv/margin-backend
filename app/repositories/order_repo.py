@@ -150,8 +150,27 @@ class OrderRepository(BaseRepository[Order]):
         start_utc: datetime,
         end_utc: datetime,
         *,
+        sort_by: str = "profit",
+        direction: str = "desc",
         limit: int = 100,
     ) -> list[dict[str, Any]]:
+        """Aggregate per-dish stats for a date range.
+
+        sort_by ∈ {qty, revenue, cost, profit, margin_percent}
+        direction ∈ {asc, desc}
+        """
+        SORT_COLUMNS = {
+            "qty": func.sum(OrderItem.quantity),
+            "quantity": func.sum(OrderItem.quantity),
+            "revenue": func.sum(OrderItem.line_revenue),
+            "cost": func.sum(OrderItem.line_cost),
+            "profit": func.sum(OrderItem.line_profit),
+            # margin_percent is computed below — fall back to profit ordering and
+            # re-sort in Python.
+        }
+        sort_expr = SORT_COLUMNS.get(sort_by, SORT_COLUMNS["profit"])
+        order = sort_expr.asc() if direction == "asc" else sort_expr.desc()
+
         stmt = (
             select(
                 OrderItem.menu_item_id,
@@ -176,8 +195,8 @@ class OrderRepository(BaseRepository[Order]):
                 OrderItem.name_snapshot,
                 MenuItem.category,
             )
-            .order_by(func.sum(OrderItem.line_profit).desc())
-            .limit(limit)
+            .order_by(order)
+            .limit(limit if sort_by != "margin_percent" else 500)
         )
         rows: list[dict[str, Any]] = []
         for r in (await self.session.execute(stmt)).all():
@@ -185,5 +204,111 @@ class OrderRepository(BaseRepository[Order]):
             revenue = Decimal(str(d["revenue"]))
             profit = Decimal(str(d["profit"]))
             d["margin_percent"] = (profit / revenue * Decimal("100")) if revenue else Decimal("0")
+            rows.append(d)
+
+        if sort_by == "margin_percent":
+            rows.sort(
+                key=lambda row: row["margin_percent"],
+                reverse=(direction != "asc"),
+            )
+            rows = rows[:limit]
+        return rows
+
+    async def dish_daily_stats(
+        self,
+        restaurant_id: uuid.UUID,
+        start_utc: datetime,
+        end_utc: datetime,
+        tz: str,
+        *,
+        menu_item_ids: list[uuid.UUID] | None = None,
+    ) -> list[dict[str, Any]]:
+        """One row per (local_date, dish). Used by dashboard heatmaps / trend tables."""
+        day = func.date(func.timezone(tz, Order.closed_at)).label("day")
+        stmt = (
+            select(
+                day,
+                OrderItem.menu_item_id,
+                func.coalesce(MenuItem.name, OrderItem.name_snapshot).label("name"),
+                MenuItem.category.label("category"),
+                func.coalesce(func.sum(OrderItem.quantity), 0).label("quantity"),
+                func.coalesce(func.sum(OrderItem.line_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(OrderItem.line_cost), 0).label("cost"),
+                func.coalesce(func.sum(OrderItem.line_profit), 0).label("profit"),
+            )
+            .select_from(OrderItem)
+            .join(Order, Order.id == OrderItem.order_id)
+            .outerjoin(MenuItem, MenuItem.id == OrderItem.menu_item_id)
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                and_(Order.closed_at >= start_utc, Order.closed_at < end_utc),
+            )
+        )
+        if menu_item_ids:
+            stmt = stmt.where(OrderItem.menu_item_id.in_(menu_item_ids))
+        stmt = stmt.group_by(
+            day,
+            OrderItem.menu_item_id,
+            MenuItem.name,
+            OrderItem.name_snapshot,
+            MenuItem.category,
+        ).order_by(day, func.sum(OrderItem.line_profit).desc())
+
+        rows: list[dict[str, Any]] = []
+        for r in (await self.session.execute(stmt)).all():
+            d = dict(r._mapping)
+            revenue = Decimal(str(d["revenue"]))
+            profit = Decimal(str(d["profit"]))
+            d["margin_percent"] = (
+                profit / revenue * Decimal("100") if revenue else Decimal("0")
+            )
+            rows.append(d)
+        return rows
+
+    async def dish_trend(
+        self,
+        restaurant_id: uuid.UUID,
+        menu_item_id: uuid.UUID,
+        start_utc: datetime,
+        end_utc: datetime,
+        tz: str,
+        *,
+        granularity: str = "day",
+    ) -> list[dict[str, Any]]:
+        """Time-series for a single dish — day or ISO week buckets."""
+        local = func.timezone(tz, Order.closed_at)
+        bucket = (
+            func.date_trunc("week", local).label("bucket")
+            if granularity == "week"
+            else func.date(local).label("bucket")
+        )
+        stmt = (
+            select(
+                bucket,
+                func.coalesce(func.sum(OrderItem.quantity), 0).label("quantity"),
+                func.coalesce(func.sum(OrderItem.line_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(OrderItem.line_cost), 0).label("cost"),
+                func.coalesce(func.sum(OrderItem.line_profit), 0).label("profit"),
+            )
+            .select_from(OrderItem)
+            .join(Order, Order.id == OrderItem.order_id)
+            .where(
+                Order.restaurant_id == restaurant_id,
+                OrderItem.menu_item_id == menu_item_id,
+                Order.closed_at.is_not(None),
+                and_(Order.closed_at >= start_utc, Order.closed_at < end_utc),
+            )
+            .group_by(bucket)
+            .order_by(bucket)
+        )
+        rows: list[dict[str, Any]] = []
+        for r in (await self.session.execute(stmt)).all():
+            d = dict(r._mapping)
+            revenue = Decimal(str(d["revenue"]))
+            profit = Decimal(str(d["profit"]))
+            d["margin_percent"] = (
+                profit / revenue * Decimal("100") if revenue else Decimal("0")
+            )
             rows.append(d)
         return rows

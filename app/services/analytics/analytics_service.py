@@ -95,12 +95,62 @@ class AnalyticsService:
         ]
 
     async def dishes_top_bottom(
-        self, restaurant: Restaurant, start: date, end: date, *, top_n: int = 10
+        self,
+        restaurant: Restaurant,
+        start: date,
+        end: date,
+        *,
+        top_n: int = 10,
+        sort_by: str = "profit",
     ) -> DishesTopBottom:
+        """Return top & bottom dishes by the chosen metric.
+
+        sort_by ∈ {qty, revenue, profit, margin_percent}.
+        """
         s, e, _ = self._bounds(restaurant, start, end)
-        rows = await self.orders.dish_performance(restaurant.id, s, e, limit=500)
-        perfs = [
-            DishPerformance(
+        rows = await self.orders.dish_performance(
+            restaurant.id, s, e, limit=500
+        )
+        perfs = [self._to_dish_performance(r) for r in rows]
+        key = self._dish_sort_key(sort_by)
+        top = sorted(perfs, key=key, reverse=True)[:top_n]
+        bottom = sorted(perfs, key=key)[:top_n]
+        return DishesTopBottom(top=top, bottom=bottom)
+
+    async def dishes_ranked(
+        self,
+        restaurant: Restaurant,
+        start: date,
+        end: date,
+        *,
+        sort_by: str = "profit",
+        direction: str = "desc",
+        limit: int = 50,
+    ) -> list[DishPerformance]:
+        s, e, _ = self._bounds(restaurant, start, end)
+        rows = await self.orders.dish_performance(
+            restaurant.id, s, e,
+            sort_by=sort_by, direction=direction, limit=limit,
+        )
+        return [self._to_dish_performance(r) for r in rows]
+
+    async def dish_daily_stats(
+        self,
+        restaurant: Restaurant,
+        start: date,
+        end: date,
+        *,
+        menu_item_ids: list | None = None,
+    ):
+        from app.schemas.analytics import DishDailyStat
+
+        s, e, tz = self._bounds(restaurant, start, end)
+        rows = await self.orders.dish_daily_stats(
+            restaurant.id, s, e, tz, menu_item_ids=menu_item_ids
+        )
+        return [
+            DishDailyStat(
+                day=r["day"],
                 menu_item_id=r["menu_item_id"],
                 name=r["name"],
                 category=r.get("category"),
@@ -112,9 +162,68 @@ class AnalyticsService:
             )
             for r in rows
         ]
-        top = sorted(perfs, key=lambda x: x.profit, reverse=True)[:top_n]
-        bottom = sorted(perfs, key=lambda x: x.profit)[:top_n]
-        return DishesTopBottom(top=top, bottom=bottom)
+
+    async def dish_trend(
+        self,
+        restaurant: Restaurant,
+        menu_item_id,
+        start: date,
+        end: date,
+        *,
+        granularity: str = "day",
+    ):
+        from app.schemas.analytics import DishTrend, DishTrendPoint
+
+        s, e, tz = self._bounds(restaurant, start, end)
+        rows = await self.orders.dish_trend(
+            restaurant.id, menu_item_id, s, e, tz, granularity=granularity
+        )
+
+        # Resolve menu-item name/category once for the response header.
+        from app.repositories.menu_repo import MenuItemRepository
+
+        menu_item = await MenuItemRepository(self.session).get(menu_item_id)
+        return DishTrend(
+            menu_item_id=menu_item_id,
+            name=menu_item.name if menu_item else "—",
+            category=menu_item.category if menu_item else None,
+            granularity=granularity,
+            points=[
+                DishTrendPoint(
+                    bucket=(r["bucket"].date() if hasattr(r["bucket"], "date") else r["bucket"]),
+                    quantity=Decimal(str(r["quantity"])),
+                    revenue=Decimal(str(r["revenue"])),
+                    cost=Decimal(str(r["cost"])),
+                    profit=Decimal(str(r["profit"])),
+                    margin_percent=Decimal(str(r["margin_percent"])),
+                )
+                for r in rows
+            ],
+        )
+
+    @staticmethod
+    def _to_dish_performance(r: dict) -> DishPerformance:
+        return DishPerformance(
+            menu_item_id=r["menu_item_id"],
+            name=r["name"],
+            category=r.get("category"),
+            quantity=Decimal(str(r["quantity"])),
+            revenue=Decimal(str(r["revenue"])),
+            cost=Decimal(str(r["cost"])),
+            profit=Decimal(str(r["profit"])),
+            margin_percent=Decimal(str(r["margin_percent"])),
+        )
+
+    @staticmethod
+    def _dish_sort_key(sort_by: str):
+        mapping = {
+            "qty": lambda d: d.quantity,
+            "quantity": lambda d: d.quantity,
+            "revenue": lambda d: d.revenue,
+            "profit": lambda d: d.profit,
+            "margin_percent": lambda d: d.margin_percent,
+        }
+        return mapping.get(sort_by, mapping["profit"])
 
     async def best_worst_weekday(
         self, restaurant: Restaurant, start: date, end: date
