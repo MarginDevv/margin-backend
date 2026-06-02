@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy import Numeric, and_, cast, delete, extract, func, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import aliased
 
 from app.models.menu_item import MenuItem
 from app.models.order import Order, OrderItem
@@ -312,3 +313,113 @@ class OrderRepository(BaseRepository[Order]):
             )
             rows.append(d)
         return rows
+
+
+    async def category_performance(
+        self,
+        restaurant_id: uuid.UUID,
+        start_utc: datetime,
+        end_utc: datetime,
+    ) -> list[dict[str, Any]]:
+        """Aggregate per-category for the period. Uncategorised dishes are bucketed
+        under "Без категории"."""
+        category_col = func.coalesce(MenuItem.category, "Без категории").label("category")
+        stmt = (
+            select(
+                category_col,
+                func.coalesce(func.sum(OrderItem.quantity), 0).label("quantity"),
+                func.coalesce(func.sum(OrderItem.line_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(OrderItem.line_cost), 0).label("cost"),
+                func.coalesce(func.sum(OrderItem.line_profit), 0).label("profit"),
+                func.count(func.distinct(OrderItem.menu_item_id)).label("dishes_count"),
+            )
+            .select_from(OrderItem)
+            .join(Order, Order.id == OrderItem.order_id)
+            .outerjoin(MenuItem, MenuItem.id == OrderItem.menu_item_id)
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                and_(Order.closed_at >= start_utc, Order.closed_at < end_utc),
+            )
+            .group_by(category_col)
+            .order_by(func.sum(OrderItem.line_profit).desc())
+        )
+        rows: list[dict[str, Any]] = []
+        for r in (await self.session.execute(stmt)).all():
+            d = dict(r._mapping)
+            revenue = Decimal(str(d["revenue"]))
+            profit = Decimal(str(d["profit"]))
+            d["margin_percent"] = (
+                profit / revenue * Decimal("100") if revenue else Decimal("0")
+            )
+            rows.append(d)
+        return rows
+
+    async def dish_pairs(
+        self,
+        restaurant_id: uuid.UUID,
+        start_utc: datetime,
+        end_utc: datetime,
+        *,
+        min_orders: int = 2,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """Top co-occurring dish pairs (basket analysis).
+
+        Self-joins order_items on order_id; restricts to unique unordered
+        pairs via `a.menu_item_id < b.menu_item_id`. Returns the top pairs
+        by joint order count. Skips items without a menu_item_id (cant be
+        matched reliably to a dish).
+
+        `min_orders` filters out one-off coincidences.
+        """
+        a = aliased(OrderItem)
+        b = aliased(OrderItem)
+        ma = aliased(MenuItem)
+        mb = aliased(MenuItem)
+
+        co_count = func.count(func.distinct(a.order_id)).label("orders_count")
+        combined_revenue = func.coalesce(
+            func.sum(a.line_revenue + b.line_revenue), 0
+        ).label("combined_revenue")
+        combined_profit = func.coalesce(
+            func.sum(a.line_profit + b.line_profit), 0
+        ).label("combined_profit")
+
+        stmt = (
+            select(
+                a.menu_item_id.label("item_a_id"),
+                func.coalesce(ma.name, "—").label("item_a_name"),
+                ma.category.label("item_a_category"),
+                b.menu_item_id.label("item_b_id"),
+                func.coalesce(mb.name, "—").label("item_b_name"),
+                mb.category.label("item_b_category"),
+                co_count,
+                combined_revenue,
+                combined_profit,
+            )
+            .select_from(a)
+            .join(b, and_(b.order_id == a.order_id, b.menu_item_id > a.menu_item_id))
+            .join(Order, Order.id == a.order_id)
+            .outerjoin(ma, ma.id == a.menu_item_id)
+            .outerjoin(mb, mb.id == b.menu_item_id)
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                and_(Order.closed_at >= start_utc, Order.closed_at < end_utc),
+                a.menu_item_id.is_not(None),
+                b.menu_item_id.is_not(None),
+            )
+            .group_by(
+                a.menu_item_id, b.menu_item_id,
+                ma.name, mb.name, ma.category, mb.category,
+            )
+            .having(func.count(func.distinct(a.order_id)) >= min_orders)
+            .order_by(co_count.desc())
+            .limit(limit)
+        )
+        rows: list[dict[str, Any]] = []
+        for r in (await self.session.execute(stmt)).all():
+            rows.append(dict(r._mapping))
+        return rows
+

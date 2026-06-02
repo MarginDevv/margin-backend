@@ -12,9 +12,11 @@ from app.core.exceptions import NotFoundError
 from app.models.restaurant import Restaurant
 from app.repositories.menu_repo import MenuItemRepository
 from app.schemas.analytics import (
+    CategoryPerformance,
     DayPoint,
     DishDailyStat,
     DishesTopBottom,
+    DishPair,
     DishPerformance,
     DishTrend,
     HourPoint,
@@ -161,4 +163,38 @@ async def dish_trend(
         raise NotFoundError("Menu item not found")
     return await AnalyticsService(session).dish_trend(
         restaurant, menu_item_id, s, e, granularity=granularity
+    )
+
+
+@router.get(
+    "/categories",
+    response_model=list[CategoryPerformance],
+    summary="Какой раздел меню приносит больше прибыли",
+)
+async def categories(
+    restaurant: Annotated[Restaurant, Depends(require_member)],
+    session: DbSession,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+) -> list[CategoryPerformance]:
+    s, e = _default_range(start, end)
+    return await AnalyticsService(session).category_performance(restaurant, s, e)
+
+
+@router.get(
+    "/cross-sell",
+    response_model=list[DishPair],
+    summary="Что чаще всего заказывают вместе (пары блюд)",
+)
+async def cross_sell(
+    restaurant: Annotated[Restaurant, Depends(require_member)],
+    session: DbSession,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+    min_orders: int = Query(default=2, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> list[DishPair]:
+    s, e = _default_range(start, end)
+    return await AnalyticsService(session).dish_pairs(
+        restaurant, s, e, min_orders=min_orders, limit=limit
     )
