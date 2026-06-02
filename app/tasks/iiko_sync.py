@@ -31,14 +31,32 @@ def incremental_sync_restaurant(self, restaurant_id: str) -> int:
 
 @celery_app.task(name="app.tasks.iiko_sync.full_sync_restaurant", bind=True, max_retries=3)
 def full_sync_restaurant(self, restaurant_id: str) -> int:
-    """Full re-sync of yesterday + nomenclature refresh for a single restaurant."""
+    """Full re-sync of yesterday + nomenclature + writeoffs for a single restaurant."""
     rid = uuid.UUID(restaurant_id)
-    yesterday = (now_utc() - timedelta(days=1))
+    yesterday = now_utc() - timedelta(days=1)
 
     async def _job(session):
         svc = IikoSyncService(session)
+        # Nomenclature first — gives us up-to-date food_cost via assembly charts.
         await svc.sync_nomenclature(rid)
-        return await svc.full_day_sync(rid, yesterday)
+        orders_processed = await svc.full_day_sync(rid, yesterday)
+        # Writeoffs cover the whole prior day in restaurant-local time.
+        from app.repositories.restaurant_repo import RestaurantRepository
+        from app.utils.datetime import day_bounds_local, restaurant_tz
+
+        restaurant = await RestaurantRepository(session).get(rid)
+        if restaurant is not None:
+            tz = restaurant_tz(restaurant.timezone)
+            start_utc, end_utc = day_bounds_local(yesterday.date(), tz)
+            try:
+                await svc.sync_writeoffs(rid, start_utc, end_utc)
+            except Exception as wexc:  # noqa: BLE001
+                logger.warning(
+                    "iiko.writeoffs.skip",
+                    restaurant_id=restaurant_id,
+                    error=str(wexc),
+                )
+        return orders_processed
 
     try:
         return run_async(with_session(_job))

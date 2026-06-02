@@ -141,9 +141,23 @@ poetry run celery -A app.tasks.celery_app beat --loglevel=INFO
 
 ### Финансовая модель
 - `MenuItem.margin_per_unit = sale_price * (1 − tax_rate) − food_cost`.
+- `food_cost` считается **рекурсивно по техкартам iiko**
+  (`product.assemblyCharts`): для составного блюда суммируются стоимости
+  ингредиентов с учётом ингредиентов-полуфабрикатов на любую глубину. Если
+  техкарты в номенклатуре нет — fallback на `costPrice` из iiko.
 - `order_items.line_profit = line_revenue − unit_food_cost * quantity`.
 - `orders.profit` = сумма `line_profit`. Все рекомендации и «лучший/худший
   день недели» считаются по `profit`, а не по выручке.
+
+### Детектор утечек прибыли
+- При полном дневном sync вместе с заказами тянем `documents/writeoffs`
+  (списания) из iiko и кладём в таблицы `writeoffs` / `writeoff_items`.
+- Если у аккаунта iiko этот endpoint недоступен — sync не падает, движок
+  просто работает без данных по списаниям (рекомендация не сработает).
+- В движке рекомендаций добавлена эвристика `INVENTORY_LEAK`: если за
+  4 недели сумма списаний / чистая выручка > 5% — `HIGH`, > 8% — `CRITICAL`.
+  Норма по отрасли 1–3%. В рекомендации перечисляются крупнейшие
+  списанные позиции — куда смотреть в первую очередь.
 
 ### Рекомендации
 Эвристический движок (`app/services/recommendations/engine.py`) на окне в

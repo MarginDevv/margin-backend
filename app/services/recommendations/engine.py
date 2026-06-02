@@ -86,6 +86,13 @@ class RecommendationEngine:
         if best and worst and best.profit > worst.profit:
             drafts.append(self._weekday_draft(best, worst))
 
+        # Inventory leak: writeoff share of revenue.
+        leak = await self._inventory_leak_draft(
+            restaurant_id, kpi.net_revenue, window_start, window_end, restaurant.timezone
+        )
+        if leak:
+            drafts.append(leak)
+
         # Optional: rewrite description/action via LLM for nicer narrative.
         # Safe to call always — falls back to heuristic text when LLM is off.
         llm = get_llm()
@@ -251,6 +258,81 @@ class RecommendationEngine:
                 )
 
         return drafts
+
+    async def _inventory_leak_draft(
+        self,
+        restaurant_id,
+        net_revenue,
+        window_start,
+        window_end,
+        tz_name: str | None,
+    ) -> Draft | None:
+        """Detect anomalous writeoff share — possible theft/spoilage."""
+        from datetime import datetime, time
+        from zoneinfo import ZoneInfo
+
+        from app.repositories.writeoff_repo import WriteoffRepository
+
+        if net_revenue <= 0:
+            return None
+
+        tz = ZoneInfo(tz_name or "Europe/Moscow")
+        start_local = datetime.combine(window_start, time.min, tzinfo=tz)
+        end_local = datetime.combine(
+            window_end + timedelta(days=1), time.min, tzinfo=tz
+        )
+        repo = WriteoffRepository(self.session)
+        total_writeoffs = await repo.total_cost_in_range(
+            restaurant_id, start_local, end_local
+        )
+        if total_writeoffs <= 0:
+            return None
+        share = total_writeoffs / net_revenue
+
+        # Industry-typical writeoff share is 1–3% of revenue. Anything
+        # noticeably above 5% deserves attention; >8% is critical.
+        if share < Decimal("0.05"):
+            return None
+
+        priority = (
+            RecommendationPriority.CRITICAL
+            if share >= Decimal("0.08")
+            else RecommendationPriority.HIGH
+        )
+        top_items = await repo.top_writeoff_items(
+            restaurant_id, start_local, end_local, limit=5
+        )
+        top_lines = ", ".join(
+            f"{t['name']} ({Decimal(str(t['cost'])):.0f} ₽)" for t in top_items[:3]
+        )
+        return Draft(
+            type=RecommendationType.INVENTORY_LEAK,
+            title="Подозрение на утечку прибыли",
+            description=(
+                f"За 4 недели списания составили {total_writeoffs:.2f} ₽ — "
+                f"{share * 100:.1f}% от чистой выручки. Норма по отрасли — 1–3%. "
+                f"Крупнейшие позиции: {top_lines or '—'}."
+            ),
+            action=(
+                "Провести внеплановую инвентаризацию, проверить причины списаний "
+                "(порча, бой, обнуление в кассе), пересмотреть доступы кладовщиков."
+            ),
+            priority=priority,
+            confidence=80,
+            estimated_uplift=total_writeoffs * Decimal("0.4"),
+            payload={
+                "total_writeoffs": str(total_writeoffs),
+                "share": float(share),
+                "top_items": [
+                    {
+                        "name": t["name"],
+                        "amount": str(t["amount"]),
+                        "cost": str(t["cost"]),
+                    }
+                    for t in top_items
+                ],
+            },
+        )
 
     @staticmethod
     def _weekday_draft(best, worst) -> Draft:

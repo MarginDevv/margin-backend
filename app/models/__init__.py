@@ -12,6 +12,7 @@ from app.models.subscription import Subscription, SubscriptionPlan, Subscription
 from app.models.telegram import DeliveryKind, TelegramDelivery, TelegramLinkToken
 from app.models.user import User
 from app.models.user_restaurant_role import Role, UserRestaurantRole
+from app.models.writeoff import Writeoff, WriteoffItem
 
 __all__ = [
     "Base",
@@ -40,4 +41,6 @@ __all__ = [
     "ActivitySeverity",
     "ReferralPayout",
     "PayoutStatus",
+    "Writeoff",
+    "WriteoffItem",
 ]
