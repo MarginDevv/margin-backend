@@ -45,6 +45,21 @@ class RecommendationPriority(str, enum.Enum):
     CRITICAL = "critical"
 
 
+class RecommendationCategory(str, enum.Enum):
+    MENU = "menu"
+    PRICING = "pricing"
+    STOCK = "stock"
+    PROMOTION = "promotion"
+    STAFF = "staff"
+    OPERATIONS = "operations"
+
+
+class RecommendationEffort(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 class Recommendation(TimestampedBase, RestaurantMixin):
     __tablename__ = "recommendations"
 
@@ -57,6 +72,17 @@ class Recommendation(TimestampedBase, RestaurantMixin):
     priority: Mapped[RecommendationPriority] = mapped_column(
         SqlEnum(RecommendationPriority, name="recommendation_priority", values_callable=lambda e: [m.value for m in e]),
         default=RecommendationPriority.MEDIUM,
+        nullable=False,
+    )
+    category: Mapped[RecommendationCategory] = mapped_column(
+        SqlEnum(RecommendationCategory, name="recommendation_category", values_callable=lambda e: [m.value for m in e]),
+        default=RecommendationCategory.OPERATIONS,
+        nullable=False,
+        index=True,
+    )
+    effort: Mapped[RecommendationEffort] = mapped_column(
+        SqlEnum(RecommendationEffort, name="recommendation_effort", values_callable=lambda e: [m.value for m in e]),
+        default=RecommendationEffort.MEDIUM,
         nullable=False,
     )
     status: Mapped[RecommendationStatus] = mapped_column(
