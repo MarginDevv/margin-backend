@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
+from app.models.activity_event import ActivityKind
 from app.models.recommendation import (
     Recommendation,
     RecommendationPriority,
@@ -34,6 +35,7 @@ from app.models.recommendation import (
 )
 from app.repositories.recommendation_repo import RecommendationRepository
 from app.repositories.restaurant_repo import RestaurantRepository
+from app.services.activity.event_service import ActivityEventService
 from app.services.analytics.analytics_service import AnalyticsService
 
 logger = get_logger("recommendations.engine")
@@ -102,6 +104,12 @@ class RecommendationEngine:
                 )
             )
 
+        await ActivityEventService(self.session).emit(
+            restaurant_id,
+            ActivityKind.RECOMMENDATIONS_GENERATED,
+            title=f"Сгенерировано {len(drafts)} рекомендаций на {for_date.isoformat()}",
+            payload={"for_date": for_date.isoformat(), "count": len(drafts)},
+        )
         await self.session.commit()
         logger.info(
             "recommendations.generated",

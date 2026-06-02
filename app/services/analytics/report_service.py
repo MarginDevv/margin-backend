@@ -8,9 +8,11 @@ from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
+from app.models.activity_event import ActivityKind
 from app.models.report import ReportPeriod
 from app.repositories.report_repo import ReportRepository
 from app.repositories.restaurant_repo import RestaurantRepository
+from app.services.activity.event_service import ActivityEventService
 from app.services.analytics.analytics_service import AnalyticsService
 
 
@@ -35,6 +37,17 @@ class ReportService:
         }
         row = self._report_row(restaurant_id, ReportPeriod.DAILY, day, day, kpi, breakdown)
         report_id = await self.reports.upsert(row)
+        await ActivityEventService(self.session).emit(
+            restaurant_id,
+            ActivityKind.REPORT_DAILY_BUILT,
+            title=f"Дневной отчёт за {day.isoformat()} собран",
+            payload={
+                "for_date": day.isoformat(),
+                "orders_count": kpi.orders_count,
+                "profit": str(kpi.profit),
+                "net_revenue": str(kpi.net_revenue),
+            },
+        )
         await self.session.commit()
         return report_id
 
@@ -65,6 +78,17 @@ class ReportService:
             restaurant_id, ReportPeriod.WEEKLY, week_start, week_end, kpi, breakdown
         )
         report_id = await self.reports.upsert(row)
+        await ActivityEventService(self.session).emit(
+            restaurant_id,
+            ActivityKind.REPORT_WEEKLY_BUILT,
+            title=f"Недельный отчёт {week_start.isoformat()} — {week_end.isoformat()} собран",
+            payload={
+                "period_start": week_start.isoformat(),
+                "period_end": week_end.isoformat(),
+                "profit": str(kpi.profit),
+                "net_revenue": str(kpi.net_revenue),
+            },
+        )
         await self.session.commit()
         return report_id
 

@@ -51,6 +51,7 @@ docker compose up --build
 | redis    | 6379 | Брокер + result backend                 |
 | worker   | —    | Celery воркер                           |
 | beat     | —    | Celery beat (планировщик)               |
+| bot      | —    | Telegram-бот (aiogram, long-polling)    |
 
 При первом запуске `api` сам прогоняет `alembic upgrade head`.
 
@@ -104,6 +105,24 @@ poetry run celery -A app.tasks.celery_app beat --loglevel=INFO
 - Бизнес-день для смены, которая закрылась в 02:00 во вторник, = понедельник.
 - Если у ресторана не настроены часы, работает safety-net — фановщик
   `build_daily_reports_all` в 05:00 берёт только их.
+
+### Telegram-бот и web-дашборд
+- Один digest = KPI отчёта + топ-3 рекомендации, отправляется во все Telegram-аккаунты,
+  привязанные к ресторану, у которых `telegram_notifications=True`.
+- Линковка: фронт получает `POST /users/me/telegram/link-token` → открывает
+  `https://t.me/<bot>?start=<token>` → пользователь жмёт Start в Telegram →
+  бот вызывает `TelegramLinkService.consume` и связывает chat_id с user_id.
+  Токены живут 15 минут, single-use, refuse-on-duplicate-chat.
+- Доставка идемпотентна: `telegram_deliveries` с UNIQUE
+  `(restaurant_id, user_id, kind, for_date)` — повторные запуски не дублируют.
+- Бот команды: `/start`, `/today`, `/yesterday`, `/help`, `/unlink`. При
+  нескольких ресторанах — inline-кнопки выбора.
+- Бот запускается отдельным контейнером (`docker compose up bot`) в режиме
+  long-polling — публичный URL не требуется. Webhook-режим зарезервирован.
+- Все ключевые события (sync ok/fail, отчёт собран, рекомендации сгенерированы,
+  изменён статус рекомендации, отправлен digest, привязан/отвязан Telegram)
+  пишутся в `activity_events` и доступны через
+  `GET /restaurants/{id}/activity` — это лента для дашборда.
 
 ### On-demand отчёты с фронта
 - `POST /api/v1/restaurants/{id}/reports/daily/build?for_date=YYYY-MM-DD`
@@ -164,6 +183,15 @@ GET  /api/v1/restaurants/{id}/reports/daily?for_date=YYYY-MM-DD     [member+]
 GET  /api/v1/restaurants/{id}/reports/weekly?week_start=YYYY-MM-DD  [member+]
 POST /api/v1/restaurants/{id}/reports/daily/build?for_date=YYYY-MM-DD     [manager+]
 POST /api/v1/restaurants/{id}/reports/weekly/build?week_start=YYYY-MM-DD  [manager+]
+POST /api/v1/restaurants/{id}/reports/daily/deliver?for_date=YYYY-MM-DD   [manager+]
+
+GET    /api/v1/users/me/telegram/status                              — TG-статус привязки
+POST   /api/v1/users/me/telegram/link-token                          — deep-link для связки
+DELETE /api/v1/users/me/telegram                                     — отвязать TG
+GET    /api/v1/users/me/telegram/notifications/{restaurant_id}       [member+]
+PATCH  /api/v1/users/me/telegram/notifications/{restaurant_id}       [member+] — toggle
+
+GET /api/v1/restaurants/{id}/activity?kind=...&severity_at_least=... [member+]
 ```
 
 ## Команды

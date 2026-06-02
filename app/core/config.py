@@ -61,8 +61,13 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list[str] = Field(default_factory=list)
 
-    # Telegram (optional)
+    # Telegram
     telegram_bot_token: str | None = None
+    telegram_bot_username: str | None = None
+    telegram_bot_mode: Literal["polling", "webhook"] = "polling"
+    telegram_webhook_url: str | None = None
+    telegram_webhook_secret: str | None = None
+    telegram_link_token_ttl_minutes: int = 15
 
     @field_validator("cors_origins", mode="before")
     @classmethod

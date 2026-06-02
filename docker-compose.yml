@@ -81,6 +81,23 @@ services:
       redis:
         condition: service_healthy
 
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: margin-bot
+    command: python -m app.bot
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

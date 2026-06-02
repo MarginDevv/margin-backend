@@ -91,6 +91,11 @@ def sync_day_then_build_daily(self, restaurant_id: str, for_date_iso: str) -> st
             day=day.isoformat(),
             synced=synced,
         )
+        # Push digest after the report is fresh. Idempotent — won't double-send
+        # even if `generate_daily` also triggers it.
+        from app.tasks.telegram import deliver_daily_digest
+
+        deliver_daily_digest.delay(restaurant_id, day.isoformat())
         return str(report_id)
     except Exception as exc:
         logger.error(

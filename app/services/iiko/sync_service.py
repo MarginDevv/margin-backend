@@ -9,9 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import IikoIntegrationError, NotFoundError
 from app.core.logging import get_logger
+from app.models.activity_event import ActivityKind, ActivitySeverity
 from app.repositories.integration_repo import IikoIntegrationRepository
 from app.repositories.menu_repo import MenuItemRepository
 from app.repositories.order_repo import OrderRepository
+from app.services.activity.event_service import ActivityEventService
 from app.services.iiko.client import IikoClient
 from app.services.iiko.transformers import (
     nomenclature_to_menu_rows,
@@ -110,6 +112,16 @@ class IikoSyncService:
             await self._persist_token(integration, client)
             integration.last_sync_at = now_utc()
             integration.last_sync_error = None
+            await ActivityEventService(self.session).emit(
+                restaurant_id,
+                ActivityKind.IIKO_SYNC_SUCCESS,
+                title=f"iiko: синхронизировано заказов: {processed}",
+                payload={
+                    "processed": processed,
+                    "date_from": date_from.isoformat(),
+                    "date_to": date_to.isoformat(),
+                },
+            )
             await self.session.commit()
             logger.info(
                 "iiko.orders.synced",
@@ -121,6 +133,13 @@ class IikoSyncService:
             return processed
         except Exception as exc:
             integration.last_sync_error = str(exc)[:1024]
+            await ActivityEventService(self.session).emit(
+                restaurant_id,
+                ActivityKind.IIKO_SYNC_FAILED,
+                title="iiko: ошибка синхронизации заказов",
+                severity=ActivitySeverity.ERROR,
+                payload={"error": str(exc)[:1024]},
+            )
             await self.session.commit()
             raise
         finally:
