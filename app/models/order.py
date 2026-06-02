@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.menu_item import MenuItem
@@ -27,18 +28,12 @@ class OrderStatus(str, enum.Enum):
     DELETED = "deleted"
 
 
-class Order(TimestampedBase):
+class Order(TimestampedBase, RestaurantMixin):
     __tablename__ = "orders"
     __table_args__ = (
         UniqueConstraint("restaurant_id", "iiko_order_id", name="uq_order_iiko"),
     )
 
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     iiko_order_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     iiko_order_number: Mapped[str | None] = mapped_column(String(32))
 

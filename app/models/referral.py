@@ -20,6 +20,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -33,7 +34,7 @@ class PayoutStatus(str, enum.Enum):
     REVERSED = "reversed"
 
 
-class ReferralPayout(TimestampedBase):
+class ReferralPayout(TimestampedBase, RestaurantMixin):
     """A single commission accrual line.
 
     Created whenever a restaurant's subscription invoice closes successfully.
@@ -44,12 +45,6 @@ class ReferralPayout(TimestampedBase):
     referrer_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

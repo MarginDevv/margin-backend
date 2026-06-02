@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -37,15 +38,9 @@ class ActivitySeverity(str, enum.Enum):
     ERROR = "error"
 
 
-class ActivityEvent(TimestampedBase):
+class ActivityEvent(TimestampedBase, RestaurantMixin):
     __tablename__ = "activity_events"
 
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),

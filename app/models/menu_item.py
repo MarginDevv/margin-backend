@@ -1,33 +1,26 @@
 """Menu item / dish, synced from iiko nomenclature."""
 from __future__ import annotations
 
-import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.order import OrderItem
     from app.models.restaurant import Restaurant
 
 
-class MenuItem(TimestampedBase):
+class MenuItem(TimestampedBase, RestaurantMixin):
     __tablename__ = "menu_items"
     __table_args__ = (
         UniqueConstraint("restaurant_id", "iiko_product_id", name="uq_menu_item_iiko"),
     )
 
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     iiko_product_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str | None] = mapped_column(String(255), index=True)

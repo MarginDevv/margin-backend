@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -24,7 +25,7 @@ class Role(str, enum.Enum):
     STAFF = "staff"
 
 
-class UserRestaurantRole(TimestampedBase):
+class UserRestaurantRole(TimestampedBase, RestaurantMixin):
     __tablename__ = "user_restaurant_roles"
     __table_args__ = (
         UniqueConstraint("user_id", "restaurant_id", name="uq_user_restaurant"),
@@ -33,12 +34,6 @@ class UserRestaurantRole(TimestampedBase):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

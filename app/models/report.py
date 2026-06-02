@@ -2,18 +2,18 @@
 from __future__ import annotations
 
 import enum
-import uuid
 from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, Integer, Numeric, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Integer, Numeric, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -25,7 +25,7 @@ class ReportPeriod(str, enum.Enum):
     MONTHLY = "monthly"
 
 
-class Report(TimestampedBase):
+class Report(TimestampedBase, RestaurantMixin):
     __tablename__ = "reports"
     __table_args__ = (
         UniqueConstraint(
@@ -34,12 +34,6 @@ class Report(TimestampedBase):
         ),
     )
 
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     period: Mapped[ReportPeriod] = mapped_column(
         SqlEnum(ReportPeriod, name="report_period", values_callable=lambda e: [m.value for m in e]),
         nullable=False,
