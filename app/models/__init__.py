@@ -5,6 +5,7 @@ from app.models.iiko_integration import IikoIntegration
 from app.models.menu_item import MenuItem
 from app.models.order import Order, OrderItem
 from app.models.recommendation import Recommendation, RecommendationStatus, RecommendationType
+from app.models.referral import PayoutStatus, ReferralPayout
 from app.models.report import Report, ReportPeriod
 from app.models.restaurant import Restaurant
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
@@ -37,4 +38,6 @@ __all__ = [
     "ActivityEvent",
     "ActivityKind",
     "ActivitySeverity",
+    "ReferralPayout",
+    "PayoutStatus",
 ]

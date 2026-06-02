@@ -37,6 +37,8 @@ from app.repositories.recommendation_repo import RecommendationRepository
 from app.repositories.restaurant_repo import RestaurantRepository
 from app.services.activity.event_service import ActivityEventService
 from app.services.analytics.analytics_service import AnalyticsService
+from app.services.llm.factory import get_llm
+from app.services.llm.recommendation_enhancer import RecommendationEnhancer
 
 logger = get_logger("recommendations.engine")
 
@@ -83,6 +85,23 @@ class RecommendationEngine:
         drafts += self._dish_drafts(dishes.top + dishes.bottom)
         if best and worst and best.profit > worst.profit:
             drafts.append(self._weekday_draft(best, worst))
+
+        # Optional: rewrite description/action via LLM for nicer narrative.
+        # Safe to call always — falls back to heuristic text when LLM is off.
+        llm = get_llm()
+        enhancer = RecommendationEnhancer(llm)
+        try:
+            for d in drafts:
+                desc, action = await enhancer.enhance(
+                    title=d.title,
+                    description=d.description,
+                    action=d.action,
+                    restaurant_name=restaurant.name,
+                )
+                d.description = desc
+                d.action = action
+        finally:
+            await llm.aclose()
 
         # Clear today's NEW recs and re-insert, so re-runs are idempotent.
         await self.repo.delete_for_date(restaurant_id, for_date)

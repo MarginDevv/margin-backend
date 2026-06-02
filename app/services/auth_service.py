@@ -17,6 +17,7 @@ from app.models.user import User
 from app.models.user_restaurant_role import Role, UserRestaurantRole
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair
+from app.services.referral.referral_service import ReferralService
 
 
 class AuthService:
@@ -41,6 +42,11 @@ class AuthService:
         restaurant = Restaurant(name=data.restaurant_name)
         self.session.add(restaurant)
         await self.session.flush()
+
+        if data.referral_code:
+            await ReferralService(self.session).attach_referrer(
+                restaurant, data.referral_code
+            )
 
         self.session.add(
             UserRestaurantRole(

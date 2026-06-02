@@ -24,6 +24,12 @@ class User(TimestampedBase):
 
     # Verified Telegram chat id for outbound notifications. Null = not linked.
     telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, index=True)
+    telegram_username: Mapped[str | None] = mapped_column(String(64))
+
+    # Public referral code. Auto-issued on demand (see ReferralService).
+    referral_code: Mapped[str | None] = mapped_column(
+        String(16), unique=True, index=True
+    )
 
     roles: Mapped[list["UserRestaurantRole"]] = relationship(
         back_populates="user",

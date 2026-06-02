@@ -201,7 +201,35 @@ GET    /api/v1/users/me/telegram/notifications/{restaurant_id}       [member+]
 PATCH  /api/v1/users/me/telegram/notifications/{restaurant_id}       [member+] — toggle
 
 GET /api/v1/restaurants/{id}/activity?kind=...&severity_at_least=... [member+]
+
+GET /api/v1/users/me/referral                                        — мой код + сводка
+GET /api/v1/users/me/referral/payouts?status=...                     — начисления комиссий
 ```
+
+## Реферальная программа
+
+- У каждого пользователя есть `referral_code` (8 символов, без 0/O/1/I/L).
+  Код выдаётся лениво при первом обращении к `GET /users/me/referral`.
+- При регистрации (`/auth/register`) или создании нового ресторана
+  (`POST /restaurants`) можно передать `referral_code`. Реферер привязывается
+  к ресторану один раз и навсегда (`restaurants.referrer_user_id`).
+- Каждое успешное закрытие инвойса по подписке создаёт строку
+  `referral_payouts` со статусом `pending` и комиссией 10% (`commission_rate`
+  настраивается в `accrue_for_invoice`). Дальше — модуль биллинга проводит
+  выплаты (`approved` → `paid`).
+- Эндпоинт `GET /users/me/referral` отдаёт сводку: код, deep-link, число
+  приведённых ресторанов, накопленную и выплаченную комиссию.
+
+## LLM (российские провайдеры)
+
+- **GigaChat** (Сбер) и **YandexGPT** — два встроенных провайдера, выбор через
+  `LLM_PROVIDER` в env. Пустое значение → шаблонный движок без LLM.
+- Эвристический движок рекомендаций решает **что** советовать
+  (с точными числами); LLM перерабатывает описание и формулировку действия
+  в естественный деловой русский — числа и факты сохраняются. Любая ошибка
+  LLM → fallback на шаблонный текст, рекомендация всё равно создаётся.
+- Интерфейс `LLMClient` универсальный — добавить новый провайдер = один файл
+  в `app/services/llm/`.
 
 ## Команды
 

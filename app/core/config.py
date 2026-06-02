@@ -69,6 +69,21 @@ class Settings(BaseSettings):
     telegram_webhook_secret: str | None = None
     telegram_link_token_ttl_minutes: int = 15
 
+    # LLM provider — "gigachat", "yandex_gpt", or "" / "noop" to disable.
+    llm_provider: str = ""
+
+    # GigaChat
+    gigachat_client_id: str | None = None
+    gigachat_client_secret: str | None = None
+    gigachat_scope: str = "GIGACHAT_API_PERS"
+    gigachat_model: str = "GigaChat"
+    gigachat_verify_ssl: bool = True
+
+    # YandexGPT
+    yandex_gpt_api_key: str | None = None
+    yandex_gpt_folder_id: str | None = None
+    yandex_gpt_model: str = "yandexgpt-lite"
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors(cls, value: object) -> object:

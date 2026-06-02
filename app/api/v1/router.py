@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     integrations,
     menu,
     recommendations,
+    referral,
     reports,
     restaurants,
     telegram,
@@ -60,4 +61,9 @@ api_router.include_router(
     telegram_webhook.router,
     prefix="/webhooks/telegram",
     tags=["telegram-webhook"],
+)
+api_router.include_router(
+    referral.router,
+    prefix="/users/me/referral",
+    tags=["referral"],
 )
