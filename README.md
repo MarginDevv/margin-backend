@@ -201,6 +201,8 @@ GET /api/v1/restaurants/{id}/analytics/dishes?sort_by=qty|revenue|profit|margin_
 GET /api/v1/restaurants/{id}/analytics/dishes/ranked?sort_by=...&direction=asc|desc&limit=...  [member+]
 GET /api/v1/restaurants/{id}/analytics/dishes/daily?menu_item_id=...                           [member+]
 GET /api/v1/restaurants/{id}/analytics/dishes/{menu_item_id}/trend?granularity=day|week        [member+]
+GET /api/v1/restaurants/{id}/analytics/categories                                              [member+]
+GET /api/v1/restaurants/{id}/analytics/cross-sell?min_orders=2&limit=20                        [member+]
 
 GET   /api/v1/restaurants/{id}/recommendations             [member+]
 PATCH /api/v1/restaurants/{id}/recommendations/{rec_id}    [manager+]

@@ -87,3 +87,26 @@ class DishTrend(ORMModel):
     category: str | None
     granularity: str
     points: list[DishTrendPoint]
+
+
+class CategoryPerformance(ORMModel):
+    category: str
+    dishes_count: int
+    quantity: Decimal
+    revenue: Decimal
+    cost: Decimal
+    profit: Decimal
+    margin_percent: Decimal
+
+
+class DishPair(ORMModel):
+    """A pair of dishes that frequently appear in the same order."""
+    item_a_id: uuid.UUID
+    item_a_name: str
+    item_a_category: str | None
+    item_b_id: uuid.UUID
+    item_b_name: str
+    item_b_category: str | None
+    orders_count: int
+    combined_revenue: Decimal
+    combined_profit: Decimal

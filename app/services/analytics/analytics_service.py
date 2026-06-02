@@ -201,6 +201,56 @@ class AnalyticsService:
             ],
         )
 
+    async def category_performance(
+        self, restaurant: Restaurant, start: date, end: date
+    ):
+        from app.schemas.analytics import CategoryPerformance
+
+        s, e, _ = self._bounds(restaurant, start, end)
+        rows = await self.orders.category_performance(restaurant.id, s, e)
+        return [
+            CategoryPerformance(
+                category=r["category"],
+                dishes_count=int(r["dishes_count"]),
+                quantity=Decimal(str(r["quantity"])),
+                revenue=Decimal(str(r["revenue"])),
+                cost=Decimal(str(r["cost"])),
+                profit=Decimal(str(r["profit"])),
+                margin_percent=Decimal(str(r["margin_percent"])),
+            )
+            for r in rows
+        ]
+
+    async def dish_pairs(
+        self,
+        restaurant: Restaurant,
+        start: date,
+        end: date,
+        *,
+        min_orders: int = 2,
+        limit: int = 20,
+    ):
+        from app.schemas.analytics import DishPair
+
+        s, e, _ = self._bounds(restaurant, start, end)
+        rows = await self.orders.dish_pairs(
+            restaurant.id, s, e, min_orders=min_orders, limit=limit
+        )
+        return [
+            DishPair(
+                item_a_id=r["item_a_id"],
+                item_a_name=r["item_a_name"],
+                item_a_category=r.get("item_a_category"),
+                item_b_id=r["item_b_id"],
+                item_b_name=r["item_b_name"],
+                item_b_category=r.get("item_b_category"),
+                orders_count=int(r["orders_count"]),
+                combined_revenue=Decimal(str(r["combined_revenue"])),
+                combined_profit=Decimal(str(r["combined_profit"])),
+            )
+            for r in rows
+        ]
+
     @staticmethod
     def _to_dish_performance(r: dict) -> DishPerformance:
         return DishPerformance(
