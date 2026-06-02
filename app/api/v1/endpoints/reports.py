@@ -79,6 +79,29 @@ async def build_daily(
 
 
 @router.post(
+    "/daily/deliver",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Manually push the daily digest to Telegram subscribers",
+)
+async def deliver_daily(
+    restaurant: Annotated[Restaurant, Depends(require_manager)],
+    for_date: date = Query(default=None),
+) -> dict:
+    from app.tasks.telegram import deliver_daily_digest
+
+    target = for_date or (date.today() - timedelta(days=1))
+    if target > date.today():
+        raise ValidationError("Cannot deliver a digest for a future date")
+    task = deliver_daily_digest.delay(str(restaurant.id), target.isoformat())
+    return {
+        "task_id": task.id,
+        "restaurant_id": str(restaurant.id),
+        "for_date": target.isoformat(),
+        "queued_at": now_utc().isoformat(),
+    }
+
+
+@router.post(
     "/weekly/build",
     response_model=BuildResponse,
     status_code=status.HTTP_202_ACCEPTED,

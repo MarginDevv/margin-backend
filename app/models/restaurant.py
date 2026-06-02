@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Integer, String
-from sqlalchemy.dialects.postgresql import JSONB
+import uuid
+
+from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
@@ -34,6 +36,13 @@ class Restaurant(TimestampedBase):
     working_hours: Mapped[dict | None] = mapped_column(JSONB)
     # Minutes after closing time to build the daily report.
     report_delay_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+
+    # Referral: who brought this restaurant in. Set once at registration.
+    referrer_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        index=True,
+    )
 
     roles: Mapped[list["UserRestaurantRole"]] = relationship(
         back_populates="restaurant",

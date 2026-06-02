@@ -51,6 +51,7 @@ docker compose up --build
 | redis    | 6379 | Брокер + result backend                 |
 | worker   | —    | Celery воркер                           |
 | beat     | —    | Celery beat (планировщик)               |
+| bot      | —    | Telegram-бот (aiogram, long-polling)    |
 
 При первом запуске `api` сам прогоняет `alembic upgrade head`.
 
@@ -104,6 +105,33 @@ poetry run celery -A app.tasks.celery_app beat --loglevel=INFO
 - Бизнес-день для смены, которая закрылась в 02:00 во вторник, = понедельник.
 - Если у ресторана не настроены часы, работает safety-net — фановщик
   `build_daily_reports_all` в 05:00 берёт только их.
+
+### Telegram-бот и web-дашборд
+- Один digest = KPI отчёта + топ-3 рекомендации, отправляется во все Telegram-аккаунты,
+  привязанные к ресторану, у которых `telegram_notifications=True`.
+- Линковка: фронт получает `POST /users/me/telegram/link-token` → открывает
+  `https://t.me/<bot>?start=<token>` → пользователь жмёт Start в Telegram →
+  бот вызывает `TelegramLinkService.consume` и связывает chat_id с user_id.
+  Токены живут 15 минут, single-use, refuse-on-duplicate-chat.
+- Доставка идемпотентна: `telegram_deliveries` с UNIQUE
+  `(restaurant_id, user_id, kind, for_date)` — повторные запуски не дублируют.
+- Бот команды: `/start`, `/today`, `/yesterday`, `/help`, `/unlink`. При
+  нескольких ресторанах — inline-кнопки выбора.
+- **Два режима** работы, переключаются через `TELEGRAM_BOT_MODE` в env:
+  - `polling` (по умолчанию, локалка и любой деплой без публичного URL).
+    Запуск: `docker compose --profile polling up bot` — отдельный контейнер
+    держит long-polling соединение с Telegram.
+  - `webhook` (прод). Telegram сам POST-ит обновления на
+    `POST /api/v1/webhooks/telegram/{secret}` твоего API. Контейнер `bot`
+    не нужен — обновления обрабатывает `api`. Перед первым запуском один
+    раз зарегистрируй URL: `docker compose --profile webhook-setup run --rm bot-setup`.
+    Требуется задать `TELEGRAM_WEBHOOK_URL` (публичный HTTPS-origin) и
+    `TELEGRAM_WEBHOOK_SECRET` (длинная случайная строка, проверяется и в URL,
+    и в заголовке `X-Telegram-Bot-Api-Secret-Token`).
+- Все ключевые события (sync ok/fail, отчёт собран, рекомендации сгенерированы,
+  изменён статус рекомендации, отправлен digest, привязан/отвязан Telegram)
+  пишутся в `activity_events` и доступны через
+  `GET /restaurants/{id}/activity` — это лента для дашборда.
 
 ### On-demand отчёты с фронта
 - `POST /api/v1/restaurants/{id}/reports/daily/build?for_date=YYYY-MM-DD`
@@ -164,7 +192,44 @@ GET  /api/v1/restaurants/{id}/reports/daily?for_date=YYYY-MM-DD     [member+]
 GET  /api/v1/restaurants/{id}/reports/weekly?week_start=YYYY-MM-DD  [member+]
 POST /api/v1/restaurants/{id}/reports/daily/build?for_date=YYYY-MM-DD     [manager+]
 POST /api/v1/restaurants/{id}/reports/weekly/build?week_start=YYYY-MM-DD  [manager+]
+POST /api/v1/restaurants/{id}/reports/daily/deliver?for_date=YYYY-MM-DD   [manager+]
+
+GET    /api/v1/users/me/telegram/status                              — TG-статус привязки
+POST   /api/v1/users/me/telegram/link-token                          — deep-link для связки
+DELETE /api/v1/users/me/telegram                                     — отвязать TG
+GET    /api/v1/users/me/telegram/notifications/{restaurant_id}       [member+]
+PATCH  /api/v1/users/me/telegram/notifications/{restaurant_id}       [member+] — toggle
+
+GET /api/v1/restaurants/{id}/activity?kind=...&severity_at_least=... [member+]
+
+GET /api/v1/users/me/referral                                        — мой код + сводка
+GET /api/v1/users/me/referral/payouts?status=...                     — начисления комиссий
 ```
+
+## Реферальная программа
+
+- У каждого пользователя есть `referral_code` (8 символов, без 0/O/1/I/L).
+  Код выдаётся лениво при первом обращении к `GET /users/me/referral`.
+- При регистрации (`/auth/register`) или создании нового ресторана
+  (`POST /restaurants`) можно передать `referral_code`. Реферер привязывается
+  к ресторану один раз и навсегда (`restaurants.referrer_user_id`).
+- Каждое успешное закрытие инвойса по подписке создаёт строку
+  `referral_payouts` со статусом `pending` и комиссией 10% (`commission_rate`
+  настраивается в `accrue_for_invoice`). Дальше — модуль биллинга проводит
+  выплаты (`approved` → `paid`).
+- Эндпоинт `GET /users/me/referral` отдаёт сводку: код, deep-link, число
+  приведённых ресторанов, накопленную и выплаченную комиссию.
+
+## LLM (российские провайдеры)
+
+- **GigaChat** (Сбер) и **YandexGPT** — два встроенных провайдера, выбор через
+  `LLM_PROVIDER` в env. Пустое значение → шаблонный движок без LLM.
+- Эвристический движок рекомендаций решает **что** советовать
+  (с точными числами); LLM перерабатывает описание и формулировку действия
+  в естественный деловой русский — числа и факты сохраняются. Любая ошибка
+  LLM → fallback на шаблонный текст, рекомендация всё равно создаётся.
+- Интерфейс `LLMClient` универсальный — добавить новый провайдер = один файл
+  в `app/services/llm/`.
 
 ## Команды
 

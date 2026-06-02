@@ -81,6 +81,40 @@ services:
       redis:
         condition: service_healthy
 
+  # Long-polling bot — for local dev and any deploy without a public HTTPS URL.
+  # Skip this when running in webhook mode (TELEGRAM_BOT_MODE=webhook); the API
+  # service handles inbound updates at /api/v1/webhooks/telegram/{secret}.
+  bot:
+    profiles: ["polling"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: margin-bot
+    command: python -m app.bot
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # One-shot helper: registers TELEGRAM_WEBHOOK_URL with Telegram and exits.
+  # Run only when needed:  docker compose run --rm bot-setup
+  bot-setup:
+    profiles: ["webhook-setup"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m app.bot setup-webhook
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+
 volumes:
   postgres_data:
   redis_data:

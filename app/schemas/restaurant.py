@@ -54,6 +54,7 @@ class RestaurantCreate(ORMModel):
     currency: str = "RUB"
     working_hours: WorkingHours | None = None
     report_delay_minutes: int = Field(default=60, ge=0, le=720)
+    referral_code: str | None = Field(default=None, max_length=16)
 
     @field_validator("working_hours")
     @classmethod

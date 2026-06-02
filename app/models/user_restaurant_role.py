@@ -5,6 +5,7 @@ import enum
 import uuid
 from typing import TYPE_CHECKING
 
+from sqlalchemy import Boolean
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -44,6 +45,9 @@ class UserRestaurantRole(TimestampedBase):
     role: Mapped[Role] = mapped_column(
         SqlEnum(Role, name="user_role", values_callable=lambda e: [m.value for m in e]),
         nullable=False,
+    )
+    telegram_notifications: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
     )
 
     user: Mapped["User"] = relationship(back_populates="roles", lazy="joined")

@@ -4,19 +4,28 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    activity,
     analytics,
     auth,
     integrations,
     menu,
     recommendations,
+    referral,
     reports,
     restaurants,
+    telegram,
+    telegram_webhook,
     users,
 )
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(
+    telegram.router,
+    prefix="/users/me/telegram",
+    tags=["telegram"],
+)
 api_router.include_router(restaurants.router, prefix="/restaurants", tags=["restaurants"])
 api_router.include_router(
     integrations.router,
@@ -42,4 +51,19 @@ api_router.include_router(
     reports.router,
     prefix="/restaurants/{restaurant_id}/reports",
     tags=["reports"],
+)
+api_router.include_router(
+    activity.router,
+    prefix="/restaurants/{restaurant_id}/activity",
+    tags=["activity"],
+)
+api_router.include_router(
+    telegram_webhook.router,
+    prefix="/webhooks/telegram",
+    tags=["telegram-webhook"],
+)
+api_router.include_router(
+    referral.router,
+    prefix="/users/me/referral",
+    tags=["referral"],
 )

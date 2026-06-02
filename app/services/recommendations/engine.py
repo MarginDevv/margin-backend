@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
+from app.models.activity_event import ActivityKind
 from app.models.recommendation import (
     Recommendation,
     RecommendationPriority,
@@ -34,7 +35,10 @@ from app.models.recommendation import (
 )
 from app.repositories.recommendation_repo import RecommendationRepository
 from app.repositories.restaurant_repo import RestaurantRepository
+from app.services.activity.event_service import ActivityEventService
 from app.services.analytics.analytics_service import AnalyticsService
+from app.services.llm.factory import get_llm
+from app.services.llm.recommendation_enhancer import RecommendationEnhancer
 
 logger = get_logger("recommendations.engine")
 
@@ -82,6 +86,23 @@ class RecommendationEngine:
         if best and worst and best.profit > worst.profit:
             drafts.append(self._weekday_draft(best, worst))
 
+        # Optional: rewrite description/action via LLM for nicer narrative.
+        # Safe to call always — falls back to heuristic text when LLM is off.
+        llm = get_llm()
+        enhancer = RecommendationEnhancer(llm)
+        try:
+            for d in drafts:
+                desc, action = await enhancer.enhance(
+                    title=d.title,
+                    description=d.description,
+                    action=d.action,
+                    restaurant_name=restaurant.name,
+                )
+                d.description = desc
+                d.action = action
+        finally:
+            await llm.aclose()
+
         # Clear today's NEW recs and re-insert, so re-runs are idempotent.
         await self.repo.delete_for_date(restaurant_id, for_date)
 
@@ -102,6 +123,12 @@ class RecommendationEngine:
                 )
             )
 
+        await ActivityEventService(self.session).emit(
+            restaurant_id,
+            ActivityKind.RECOMMENDATIONS_GENERATED,
+            title=f"Сгенерировано {len(drafts)} рекомендаций на {for_date.isoformat()}",
+            payload={"for_date": for_date.isoformat(), "count": len(drafts)},
+        )
         await self.session.commit()
         logger.info(
             "recommendations.generated",

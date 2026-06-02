@@ -23,6 +23,12 @@ def generate_daily(restaurant_id: str, for_date_iso: str | None = None) -> int:
 
     count = run_async(with_session(_job))
     logger.info("recs.generated", restaurant_id=restaurant_id, count=count, for_date=target.isoformat())
+
+    # Once recs are ready, ask the notifier to push the digest. The digest task
+    # is idempotent — safe to enqueue from multiple hooks for the same date.
+    from app.tasks.telegram import deliver_daily_digest
+
+    deliver_daily_digest.delay(restaurant_id, target.isoformat())
     return count
 
 

@@ -14,6 +14,7 @@ celery_app = Celery(
         "app.tasks.iiko_sync",
         "app.tasks.reports",
         "app.tasks.recommendations",
+        "app.tasks.telegram",
     ],
 )
 

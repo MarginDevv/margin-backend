@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import BigInteger, Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
@@ -21,6 +21,15 @@ class User(TimestampedBase):
     phone: Mapped[str | None] = mapped_column(String(32))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Verified Telegram chat id for outbound notifications. Null = not linked.
+    telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, index=True)
+    telegram_username: Mapped[str | None] = mapped_column(String(64))
+
+    # Public referral code. Auto-issued on demand (see ReferralService).
+    referral_code: Mapped[str | None] = mapped_column(
+        String(16), unique=True, index=True
+    )
 
     roles: Mapped[list["UserRestaurantRole"]] = relationship(
         back_populates="user",

@@ -42,9 +42,15 @@ async def list_my_restaurants(user: CurrentUser, session: DbSession) -> list[Res
 async def create_restaurant(
     payload: RestaurantCreate, user: CurrentUser, session: DbSession
 ) -> RestaurantRead:
-    restaurant = Restaurant(**payload.model_dump())
+    data = payload.model_dump()
+    referral_code = data.pop("referral_code", None)
+    restaurant = Restaurant(**data)
     session.add(restaurant)
     await session.flush()
+    if referral_code:
+        from app.services.referral.referral_service import ReferralService
+
+        await ReferralService(session).attach_referrer(restaurant, referral_code)
     session.add(
         UserRestaurantRole(
             user_id=user.id, restaurant_id=restaurant.id, role=Role.OWNER
