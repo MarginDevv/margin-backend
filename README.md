@@ -1,2 +1,166 @@
-# margin-backend
-Backend для Маржин — ИИ-управляющий для ресторанов
+# Margin Backend
+
+AI-управляющий для ресторанов: подключается к iikoCloud, считает реальную
+маржинальность по чистой прибыли, находит утечки и ежедневно выдаёт
+рекомендации.
+
+## Стек
+
+- Python 3.11 · FastAPI · Pydantic v2
+- PostgreSQL 16 · SQLAlchemy 2.0 (async) · Alembic
+- Celery + Celery Beat · Redis
+- Docker Compose · Poetry
+- Ruff · mypy · pytest (asyncio)
+
+## Структура
+
+```
+app/
+├── core/             # config, db, security, dependencies, logging, exceptions
+├── api/v1/endpoints/ # FastAPI routers (auth, users, restaurants, integrations,
+│                     # menu, analytics, recommendations, reports)
+├── models/           # SQLAlchemy 2.0 models
+├── schemas/          # Pydantic v2 schemas
+├── repositories/     # Data-access layer
+├── services/         # Business logic
+│   ├── iiko/         # iikoCloud Transport API client, transformers, sync
+│   ├── analytics/    # KPI, by-hour/day/weekday, dish performance, reports
+│   └── recommendations/  # Heuristic engine producing daily recs
+├── tasks/            # Celery app + tasks (iiko_sync, reports, recommendations)
+├── utils/            # crypto (Fernet), datetime helpers
+└── main.py
+alembic/              # DB migrations
+tests/                # unit + integration tests
+```
+
+## Быстрый старт (Docker)
+
+```bash
+cp .env.example .env
+# обязательно задай APP_SECRET_KEY и JWT_SECRET_KEY длиной >= 16 символов
+
+docker compose up --build
+```
+
+Сервисы:
+
+| Сервис   | Порт | Назначение                              |
+|----------|------|-----------------------------------------|
+| api      | 8000 | FastAPI (Swagger: http://localhost:8000/docs) |
+| postgres | 5432 | PostgreSQL                              |
+| redis    | 6379 | Брокер + result backend                 |
+| worker   | —    | Celery воркер                           |
+| beat     | —    | Celery beat (планировщик)               |
+
+При первом запуске `api` сам прогоняет `alembic upgrade head`.
+
+## Локально (без Docker)
+
+```bash
+poetry install
+poetry run alembic upgrade head
+poetry run uvicorn app.main:app --reload
+poetry run celery -A app.tasks.celery_app worker --loglevel=INFO
+poetry run celery -A app.tasks.celery_app beat --loglevel=INFO
+```
+
+## Архитектурные решения
+
+### Multi-tenant и роли
+- `User` владеет `Restaurant` через таблицу `user_restaurant_roles` с ролью
+  `owner | manager | staff`.
+- Подписки привязаны к ресторану (1:1, `subscriptions.restaurant_id UNIQUE`).
+- Любой защищённый эндпоинт берёт `restaurant_id` из path и через
+  `require_owner / require_manager / require_member` проверяет роль.
+
+### iiko integration
+- `apiLogin` шифруется Fernet-ключом, производным от `APP_SECRET_KEY` (см.
+  `app/utils/crypto.py`).
+- `access_token` (TTL ~55 мин) кэшируется в `iiko_integrations`. Клиент
+  автоматически переиздаёт его и повторяет запрос на 401.
+- Транспорт: `httpx.AsyncClient` + `tenacity` (4 попытки, экспоненциальный
+  бэкофф) для transient ошибок (5xx, сетевые сбои).
+
+### Стратегия синхронизации
+- **15 минут** — `incremental_sync_all` (Celery beat) фанит таски по всем
+  активным интеграциям. Каждая тянет `documents/sales` с
+  `dateFrom = last_sync_at − 10 минут`. Перекрытие защищает от пропусков.
+- **04:00 локального TZ** — `daily_full_sync_all`: полная синхронизация
+  номенклатуры + всех заказов за вчера (надёжность даже при сбоях
+  инкрементального синка).
+- Хранение детализировано: каждый `order_item` несёт цену, себестоимость и
+  прибыль, заказ — `opened_at/closed_at`, по часам/дням недели аналитика
+  считается из БД без перерасчёта в реальном времени.
+
+### Финансовая модель
+- `MenuItem.margin_per_unit = sale_price * (1 − tax_rate) − food_cost`.
+- `order_items.line_profit = line_revenue − unit_food_cost * quantity`.
+- `orders.profit` = сумма `line_profit`. Все рекомендации и «лучший/худший
+  день недели» считаются по `profit`, а не по выручке.
+
+### Рекомендации
+Эвристический движок (`app/services/recommendations/engine.py`) на окне в
+4 недели генерирует типы: `promote_dish`, `price_up`, `price_down`,
+`remove_dish`, `cost_reduce`, `day_of_week`. Каждая запись несёт
+`confidence` и `payload` со всеми входными цифрами для аудита.
+
+## API (v1)
+
+```
+POST /api/v1/auth/register          — owner + первый ресторан
+POST /api/v1/auth/login             — JWT access + refresh
+POST /api/v1/auth/refresh
+
+GET  /api/v1/users/me               — профиль
+PATCH /api/v1/users/me
+POST /api/v1/users/me/password
+
+GET  /api/v1/restaurants            — мои рестораны
+POST /api/v1/restaurants
+GET  /api/v1/restaurants/{id}
+PATCH /api/v1/restaurants/{id}      [owner]
+GET  /api/v1/restaurants/{id}/members              [owner]
+POST /api/v1/restaurants/{id}/members              [owner]
+DELETE /api/v1/restaurants/{id}/members/{user_id}  [owner]
+
+POST   /api/v1/restaurants/{id}/integrations/iiko       [owner]
+GET    /api/v1/restaurants/{id}/integrations/iiko       [manager+]
+PATCH  /api/v1/restaurants/{id}/integrations/iiko       [owner]
+DELETE /api/v1/restaurants/{id}/integrations/iiko       [owner]
+POST   /api/v1/restaurants/{id}/integrations/iiko/sync  [manager+]  ?full=true
+
+GET   /api/v1/restaurants/{id}/menu               [member+]
+PATCH /api/v1/restaurants/{id}/menu/{menu_item_id}[manager+]
+
+GET /api/v1/restaurants/{id}/analytics/kpi         [member+]
+GET /api/v1/restaurants/{id}/analytics/by-hour     [member+]
+GET /api/v1/restaurants/{id}/analytics/by-day      [member+]
+GET /api/v1/restaurants/{id}/analytics/by-weekday  [member+]
+GET /api/v1/restaurants/{id}/analytics/dishes      [member+]
+
+GET   /api/v1/restaurants/{id}/recommendations             [member+]
+PATCH /api/v1/restaurants/{id}/recommendations/{rec_id}    [manager+]
+
+GET /api/v1/restaurants/{id}/reports/daily?for_date=YYYY-MM-DD     [member+]
+GET /api/v1/restaurants/{id}/reports/weekly?week_start=YYYY-MM-DD  [member+]
+```
+
+## Команды
+
+```bash
+poetry run ruff check .
+poetry run ruff format .
+poetry run mypy app
+poetry run pytest
+
+poetry run alembic revision --autogenerate -m "..."
+poetry run alembic upgrade head
+```
+
+## Roadmap (вне MVP)
+
+- Sync ассемблейных карт iiko для точного food_cost (сейчас fallback на `costPrice`).
+- Полная доставка ежедневных рекомендаций в Telegram (`TELEGRAM_BOT_TOKEN` в env).
+- Биллинг подписок (Stripe / ЮKassa / CloudPayments).
+- Webhook-приём событий iiko как опциональная альтернатива пуллингу.
+- Rate-limit и audit-log на API.
