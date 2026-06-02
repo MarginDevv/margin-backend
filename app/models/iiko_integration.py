@@ -1,22 +1,30 @@
 """iikoCloud integration credentials and sync metadata per restaurant."""
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
-from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
 
 
-class IikoIntegration(TimestampedBase, RestaurantMixin):
+class IikoIntegration(TimestampedBase):
     __tablename__ = "iiko_integrations"
-    __restaurant_unique__ = True
+
+    restaurant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("restaurants.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
 
     # iikoCloud API login (apiLogin) — secret, stored as-is for now (encrypt before prod).
     api_login: Mapped[str] = mapped_column(String(255), nullable=False)

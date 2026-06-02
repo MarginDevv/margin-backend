@@ -28,13 +28,12 @@ class Base(DeclarativeBase):
 
 
 def _create_engine() -> AsyncEngine:
-    return create_async_engine(
-        settings.sqlalchemy_database_uri,
-        echo=settings.app_debug,
-        pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
-    )
+    url = settings.sqlalchemy_database_uri
+    kwargs: dict[str, Any] = {"echo": settings.app_debug}
+    # SQLite (used in tests) ignores pool_size/max_overflow and errors on them.
+    if not url.startswith("sqlite"):
+        kwargs.update(pool_pre_ping=True, pool_size=10, max_overflow=20)
+    return create_async_engine(url, **kwargs)
 
 
 engine: AsyncEngine = _create_engine()

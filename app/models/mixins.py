@@ -5,29 +5,26 @@ import uuid
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, declared_attr, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class RestaurantMixin:
     """Adds a ``restaurant_id`` FK column pointing at ``restaurants.id``.
 
     The column is indexed and non-nullable with ``ON DELETE CASCADE``.
-    Subclasses that need a one-to-one relationship to ``Restaurant``
-    should set ``__restaurant_unique__ = True`` to emit a unique
-    constraint on the column.
+    Use for the common many-to-one case (``Restaurant`` has many of these).
+
+    Models that need a 1:1 relationship to ``Restaurant`` (e.g. ``Subscription``,
+    ``IikoIntegration``) should declare ``restaurant_id`` inline with
+    ``unique=True`` instead of using this mixin.
     """
 
-    __restaurant_unique__: bool = False
-
-    @declared_attr
-    def restaurant_id(cls) -> Mapped[uuid.UUID]:
-        return mapped_column(
-            UUID(as_uuid=True),
-            ForeignKey("restaurants.id", ondelete="CASCADE"),
-            nullable=False,
-            index=True,
-            unique=cls.__restaurant_unique__,
-        )
+    restaurant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("restaurants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
 
 __all__ = ["RestaurantMixin"]
