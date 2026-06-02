@@ -57,3 +57,33 @@ class DishPerformance(ORMModel):
 class DishesTopBottom(ORMModel):
     top: list[DishPerformance]
     bottom: list[DishPerformance]
+
+
+class DishDailyStat(ORMModel):
+    """One row per (date, dish) — flat fact for the dashboard."""
+    day: date
+    menu_item_id: uuid.UUID | None
+    name: str
+    category: str | None
+    quantity: Decimal
+    revenue: Decimal
+    cost: Decimal
+    profit: Decimal
+    margin_percent: Decimal
+
+
+class DishTrendPoint(ORMModel):
+    bucket: date
+    quantity: Decimal
+    revenue: Decimal
+    cost: Decimal
+    profit: Decimal
+    margin_percent: Decimal
+
+
+class DishTrend(ORMModel):
+    menu_item_id: uuid.UUID
+    name: str
+    category: str | None
+    granularity: str
+    points: list[DishTrendPoint]

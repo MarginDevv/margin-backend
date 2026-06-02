@@ -1,21 +1,31 @@
 """Analytics endpoints."""
 from __future__ import annotations
 
+import uuid
 from datetime import date, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import DbSession, require_member
+from app.core.exceptions import NotFoundError
 from app.models.restaurant import Restaurant
+from app.repositories.menu_repo import MenuItemRepository
 from app.schemas.analytics import (
     DayPoint,
+    DishDailyStat,
     DishesTopBottom,
+    DishPerformance,
+    DishTrend,
     HourPoint,
     KpiSummary,
     WeekdayPoint,
 )
 from app.services.analytics.analytics_service import AnalyticsService
+
+SortBy = Literal["qty", "revenue", "profit", "margin_percent"]
+Direction = Literal["asc", "desc"]
+Granularity = Literal["day", "week"]
 
 router = APIRouter()
 
@@ -75,13 +85,80 @@ async def by_weekday(
     return await AnalyticsService(session).by_weekday(restaurant, s, e)
 
 
-@router.get("/dishes", response_model=DishesTopBottom)
+@router.get(
+    "/dishes",
+    response_model=DishesTopBottom,
+    summary="Топ и анти-топ блюд по выбранной метрике",
+)
 async def dishes(
     restaurant: Annotated[Restaurant, Depends(require_member)],
     session: DbSession,
     start: date | None = Query(default=None),
     end: date | None = Query(default=None),
     top_n: int = Query(default=10, ge=1, le=100),
+    sort_by: SortBy = Query(default="profit"),
 ) -> DishesTopBottom:
     s, e = _default_range(start, end)
-    return await AnalyticsService(session).dishes_top_bottom(restaurant, s, e, top_n=top_n)
+    return await AnalyticsService(session).dishes_top_bottom(
+        restaurant, s, e, top_n=top_n, sort_by=sort_by
+    )
+
+
+@router.get(
+    "/dishes/ranked",
+    response_model=list[DishPerformance],
+    summary="Плоский список блюд с сортировкой (qty/revenue/profit/margin%)",
+)
+async def dishes_ranked(
+    restaurant: Annotated[Restaurant, Depends(require_member)],
+    session: DbSession,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+    sort_by: SortBy = Query(default="profit"),
+    direction: Direction = Query(default="desc"),
+    limit: int = Query(default=50, ge=1, le=500),
+) -> list[DishPerformance]:
+    s, e = _default_range(start, end)
+    return await AnalyticsService(session).dishes_ranked(
+        restaurant, s, e, sort_by=sort_by, direction=direction, limit=limit
+    )
+
+
+@router.get(
+    "/dishes/daily",
+    response_model=list[DishDailyStat],
+    summary="Плоская таблица (date × dish) с продажами и маржой по дням",
+)
+async def dishes_daily(
+    restaurant: Annotated[Restaurant, Depends(require_member)],
+    session: DbSession,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+    menu_item_id: list[uuid.UUID] | None = Query(default=None),
+) -> list[DishDailyStat]:
+    s, e = _default_range(start, end)
+    return await AnalyticsService(session).dish_daily_stats(
+        restaurant, s, e, menu_item_ids=menu_item_id
+    )
+
+
+@router.get(
+    "/dishes/{menu_item_id}/trend",
+    response_model=DishTrend,
+    summary="Динамика конкретного блюда (день / неделя)",
+)
+async def dish_trend(
+    menu_item_id: uuid.UUID,
+    restaurant: Annotated[Restaurant, Depends(require_member)],
+    session: DbSession,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+    granularity: Granularity = Query(default="day"),
+) -> DishTrend:
+    s, e = _default_range(start, end)
+    item = await MenuItemRepository(session).get(menu_item_id)
+    if not item or item.restaurant_id != restaurant.id:
+        raise NotFoundError("Menu item not found")
+    return await AnalyticsService(session).dish_trend(
+        restaurant, menu_item_id, s, e, granularity=granularity
+    )
