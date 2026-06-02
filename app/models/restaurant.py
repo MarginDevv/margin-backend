@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
@@ -26,6 +27,13 @@ class Restaurant(TimestampedBase):
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Moscow", nullable=False)
     currency: Mapped[str] = mapped_column(String(8), default="RUB", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Working hours: { "mon": {"open": "10:00", "close": "23:00"}, ... }
+    # close < open means the business day spans midnight (e.g., 18:00-02:00).
+    # A weekday absent or set to null means the restaurant is closed that day.
+    working_hours: Mapped[dict | None] = mapped_column(JSONB)
+    # Minutes after closing time to build the daily report.
+    report_delay_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
 
     roles: Mapped[list["UserRestaurantRole"]] = relationship(
         back_populates="restaurant",

@@ -40,8 +40,14 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.iiko_sync.daily_full_sync_all",
         "schedule": crontab(hour=4, minute=0),
     },
-    # Daily reports for yesterday at 05:00.
-    "build-daily-reports": {
+    # Per-restaurant daily report ~1h after each restaurant's close.
+    # Runs every 15 min; only fires for restaurants whose close+delay matches.
+    "schedule-due-daily-reports": {
+        "task": "app.tasks.reports.schedule_due_daily_reports",
+        "schedule": crontab(minute="*/15"),
+    },
+    # Safety net for restaurants without working_hours configured.
+    "build-daily-reports-fallback": {
         "task": "app.tasks.reports.build_daily_reports_all",
         "schedule": crontab(hour=5, minute=0),
     },

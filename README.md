@@ -92,6 +92,25 @@ poetry run celery -A app.tasks.celery_app beat --loglevel=INFO
   прибыль, заказ — `opened_at/closed_at`, по часам/дням недели аналитика
   считается из БД без перерасчёта в реальном времени.
 
+### Daily report по графику ресторана
+- В `Restaurant` есть `working_hours` (JSONB по дням недели, `HH:MM`) и
+  `report_delay_minutes` (по умолчанию 60).
+- Celery beat-таск `schedule_due_daily_reports` запускается каждые 15 мин и
+  для каждого активного ресторана считает «close + delay» в его локальном
+  TZ. Если момент попал в текущее 15-минутное окно — ставит цепочку
+  `sync_day_then_build_daily(restaurant_id, business_day)`, которая сперва
+  досинхронит заказы за бизнес-день (включая закрытия после полуночи),
+  затем пересоберёт `Report`.
+- Бизнес-день для смены, которая закрылась в 02:00 во вторник, = понедельник.
+- Если у ресторана не настроены часы, работает safety-net — фановщик
+  `build_daily_reports_all` в 05:00 берёт только их.
+
+### On-demand отчёты с фронта
+- `POST /api/v1/restaurants/{id}/reports/daily/build?for_date=YYYY-MM-DD`
+  — manager+ кикает sync+rebuild. Возвращает `task_id` и `queued_at`.
+- `POST /api/v1/restaurants/{id}/reports/weekly/build?week_start=YYYY-MM-DD`
+  — то же для недели.
+
 ### Финансовая модель
 - `MenuItem.margin_per_unit = sale_price * (1 − tax_rate) − food_cost`.
 - `order_items.line_profit = line_revenue − unit_food_cost * quantity`.
@@ -141,8 +160,10 @@ GET /api/v1/restaurants/{id}/analytics/dishes      [member+]
 GET   /api/v1/restaurants/{id}/recommendations             [member+]
 PATCH /api/v1/restaurants/{id}/recommendations/{rec_id}    [manager+]
 
-GET /api/v1/restaurants/{id}/reports/daily?for_date=YYYY-MM-DD     [member+]
-GET /api/v1/restaurants/{id}/reports/weekly?week_start=YYYY-MM-DD  [member+]
+GET  /api/v1/restaurants/{id}/reports/daily?for_date=YYYY-MM-DD     [member+]
+GET  /api/v1/restaurants/{id}/reports/weekly?week_start=YYYY-MM-DD  [member+]
+POST /api/v1/restaurants/{id}/reports/daily/build?for_date=YYYY-MM-DD     [manager+]
+POST /api/v1/restaurants/{id}/reports/weekly/build?week_start=YYYY-MM-DD  [manager+]
 ```
 
 ## Команды
