@@ -2,18 +2,18 @@
 from __future__ import annotations
 
 import enum
-import uuid
 from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, Integer, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -45,15 +45,9 @@ class RecommendationPriority(str, enum.Enum):
     CRITICAL = "critical"
 
 
-class Recommendation(TimestampedBase):
+class Recommendation(TimestampedBase, RestaurantMixin):
     __tablename__ = "recommendations"
 
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     for_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
 
     type: Mapped[RecommendationType] = mapped_column(

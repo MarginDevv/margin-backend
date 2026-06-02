@@ -13,6 +13,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.mixins import RestaurantMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -40,7 +41,7 @@ class DeliveryKind(str, enum.Enum):
     SYSTEM = "system"
 
 
-class TelegramDelivery(TimestampedBase):
+class TelegramDelivery(TimestampedBase, RestaurantMixin):
     """Idempotency log for outbound notifications.
 
     Unique by (restaurant_id, user_id, kind, for_date) — re-runs of the digest
@@ -54,12 +55,6 @@ class TelegramDelivery(TimestampedBase):
         ),
     )
 
-    restaurant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("restaurants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
