@@ -19,7 +19,9 @@ from app.schemas.analytics import (
     DishPair,
     DishPerformance,
     DishTrend,
+    Heatmap,
     HourPoint,
+    KpiComparison,
     KpiSummary,
     WeekdayPoint,
 )
@@ -197,4 +199,37 @@ async def cross_sell(
     s, e = _default_range(start, end)
     return await AnalyticsService(session).dish_pairs(
         restaurant, s, e, min_orders=min_orders, limit=limit
+    )
+
+
+@router.get(
+    "/kpi/compare",
+    response_model=KpiComparison,
+    summary="KPI текущего периода + предыдущего равной длины + дельты %",
+)
+async def kpi_compare(
+    restaurant: Annotated[Restaurant, Depends(require_member)],
+    session: DbSession,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+) -> KpiComparison:
+    s, e = _default_range(start, end)
+    return await AnalyticsService(session).kpi_compare(restaurant, s, e)
+
+
+@router.get(
+    "/heatmap",
+    response_model=Heatmap,
+    summary="Тепловая карта (день недели × час) по выручке / прибыли / заказам",
+)
+async def heatmap(
+    restaurant: Annotated[Restaurant, Depends(require_member)],
+    session: DbSession,
+    start: date | None = Query(default=None),
+    end: date | None = Query(default=None),
+    metric: Literal["revenue", "profit", "orders"] = Query(default="revenue"),
+) -> Heatmap:
+    s, e = _default_range(start, end)
+    return await AnalyticsService(session).heatmap_weekday_hour(
+        restaurant, s, e, metric=metric
     )

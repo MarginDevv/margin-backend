@@ -203,6 +203,8 @@ GET /api/v1/restaurants/{id}/analytics/dishes/daily?menu_item_id=...            
 GET /api/v1/restaurants/{id}/analytics/dishes/{menu_item_id}/trend?granularity=day|week        [member+]
 GET /api/v1/restaurants/{id}/analytics/categories                                              [member+]
 GET /api/v1/restaurants/{id}/analytics/cross-sell?min_orders=2&limit=20                        [member+]
+GET /api/v1/restaurants/{id}/analytics/kpi/compare?start=&end=                                 [member+]
+GET /api/v1/restaurants/{id}/analytics/heatmap?metric=revenue|profit|orders                    [member+]
 
 GET   /api/v1/restaurants/{id}/recommendations             [member+]
 PATCH /api/v1/restaurants/{id}/recommendations/{rec_id}    [manager+]

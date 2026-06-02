@@ -423,3 +423,35 @@ class OrderRepository(BaseRepository[Order]):
             rows.append(dict(r._mapping))
         return rows
 
+
+
+    async def heatmap_weekday_hour(
+        self,
+        restaurant_id: uuid.UUID,
+        start_utc: datetime,
+        end_utc: datetime,
+        tz: str,
+    ) -> list[dict[str, Any]]:
+        """Return one row per (weekday, hour) in the period."""
+        local = func.timezone(tz, Order.closed_at)
+        pg_dow = extract("dow", local)
+        weekday = cast(((pg_dow + 6) % 7), Numeric).label("weekday")
+        hour = cast(extract("hour", local), Numeric).label("hour")
+        stmt = (
+            select(
+                weekday,
+                hour,
+                func.count(Order.id).label("orders_count"),
+                func.coalesce(func.sum(Order.net_revenue), 0).label("revenue"),
+                func.coalesce(func.sum(Order.profit), 0).label("profit"),
+            )
+            .where(
+                Order.restaurant_id == restaurant_id,
+                Order.closed_at.is_not(None),
+                Order.closed_at >= start_utc,
+                Order.closed_at < end_utc,
+            )
+            .group_by(weekday, hour)
+            .order_by(weekday, hour)
+        )
+        return [dict(r._mapping) for r in (await self.session.execute(stmt)).all()]
