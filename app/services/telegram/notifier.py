@@ -128,6 +128,41 @@ class TelegramNotifier:
             )
             return stats
 
+        # vs same date one week ago — week-over-week feels right for a daily digest.
+        from datetime import timedelta as _td
+
+        from app.services.analytics.analytics_service import AnalyticsService
+
+        analytics = AnalyticsService(self.session)
+        try:
+            compare = await analytics.kpi_compare(restaurant, for_date, for_date)
+            # Quick swap: kpi_compare uses previous equal-length period (=1 day),
+            # which is yesterday. For a daily digest, week-over-week is more useful.
+            same_dow_last_week = for_date - _td(days=7)
+            prev_kpi = await analytics.kpi(
+                restaurant, same_dow_last_week, same_dow_last_week
+            )
+            deltas = {
+                "revenue": analytics._delta_pct(
+                    compare.current.net_revenue, prev_kpi.net_revenue
+                ),
+                "profit": analytics._delta_pct(
+                    compare.current.profit, prev_kpi.profit
+                ),
+                "margin_percent": analytics._delta_pct(
+                    compare.current.margin_percent, prev_kpi.margin_percent
+                ),
+                "orders_count": analytics._delta_pct(
+                    compare.current.orders_count, prev_kpi.orders_count
+                ),
+                "avg_check": analytics._delta_pct(
+                    compare.current.avg_check, prev_kpi.avg_check
+                ),
+            }
+        except Exception:  # noqa: BLE001
+            # Comparison is a nice-to-have; never block the digest because of it.
+            deltas = None
+
         text = render_daily_digest(
             restaurant.name,
             for_date,
@@ -135,6 +170,7 @@ class TelegramNotifier:
             recs,
             currency=restaurant.currency,
             dashboard_url=dashboard_url(restaurant_id),
+            deltas=deltas,
         )
 
         events = ActivityEventService(self.session)

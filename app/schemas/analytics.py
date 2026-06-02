@@ -99,6 +99,39 @@ class CategoryPerformance(ORMModel):
     margin_percent: Decimal
 
 
+class KpiComparison(ORMModel):
+    """KPI for two equal-length consecutive periods + delta percentages.
+
+    `current` and `previous` use the same metric set so the dashboard can
+    render any of them with one component.
+    """
+    current: "KpiSummary"
+    previous: "KpiSummary"
+    # Deltas as percentages (current - previous) / previous * 100.
+    # Null when previous == 0 (no baseline to compare against).
+    delta_orders_count: Decimal | None
+    delta_guests_count: Decimal | None
+    delta_net_revenue: Decimal | None
+    delta_profit: Decimal | None
+    delta_avg_check: Decimal | None
+    delta_margin_percent: Decimal | None
+
+
+class HeatmapCell(ORMModel):
+    """One cell of the weekday × hour heatmap."""
+    weekday: int  # 0 = Mon … 6 = Sun
+    hour: int  # 0..23 in restaurant local tz
+    value: Decimal
+    orders_count: int
+
+
+class Heatmap(ORMModel):
+    metric: str  # "revenue" | "profit" | "orders"
+    period_start: date
+    period_end: date
+    cells: list[HeatmapCell]
+
+
 class DishPair(ORMModel):
     """A pair of dishes that frequently appear in the same order."""
     item_a_id: uuid.UUID

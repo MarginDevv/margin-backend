@@ -35,6 +35,18 @@ def escape_html(text: str) -> str:
     )
 
 
+def _delta_badge(value) -> str:
+    """Returns ' ↑+12.3%' / ' ↓−4.5%' / '' for a delta percentage."""
+    if value is None:
+        return ""
+    pct = float(value)
+    if abs(pct) < 0.5:
+        return " (≈)"
+    arrow = "↑" if pct > 0 else "↓"
+    sign = "+" if pct > 0 else "−"
+    return f" {arrow}{sign}{abs(pct):.1f}%"
+
+
 def render_daily_digest(
     restaurant_name: str,
     for_date: date,
@@ -43,19 +55,35 @@ def render_daily_digest(
     *,
     currency: str = "₽",
     dashboard_url: str | None = None,
+    deltas: dict | None = None,
 ) -> str:
+    """Render the daily digest.
+
+    `deltas` is optional and may include any of these keys (vs previous equal
+    period), each a Decimal-like or None:
+      revenue, profit, margin_percent, orders_count, avg_check
+    """
     name = escape_html(restaurant_name)
+    d = deltas or {}
     lines: list[str] = []
     lines.append(f"📊 <b>Margin · отчёт за {for_date.strftime('%d.%m.%Y')}</b>")
     lines.append(f"🏢 {name}")
     lines.append("")
-    lines.append(f"Выручка: <b>{_money(report.net_revenue, currency)}</b>")
     lines.append(
-        f"Прибыль: <b>{_money(report.profit, currency)}</b>"
-        f" · маржа {_pct(report.margin_percent)}"
+        f"Выручка: <b>{_money(report.net_revenue, currency)}</b>"
+        f"{_delta_badge(d.get('revenue'))}"
     )
     lines.append(
-        f"Чеков: <b>{report.orders_count}</b> · средний чек {_money(report.avg_check, currency)}"
+        f"Прибыль: <b>{_money(report.profit, currency)}</b>"
+        f"{_delta_badge(d.get('profit'))}"
+        f" · маржа {_pct(report.margin_percent)}"
+        f"{_delta_badge(d.get('margin_percent'))}"
+    )
+    lines.append(
+        f"Чеков: <b>{report.orders_count}</b>"
+        f"{_delta_badge(d.get('orders_count'))}"
+        f" · средний чек {_money(report.avg_check, currency)}"
+        f"{_delta_badge(d.get('avg_check'))}"
     )
     if report.guests_count:
         lines.append(f"Гостей: {report.guests_count}")

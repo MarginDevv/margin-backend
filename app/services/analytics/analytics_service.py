@@ -201,6 +201,73 @@ class AnalyticsService:
             ],
         )
 
+    async def kpi_compare(
+        self, restaurant: Restaurant, start: date, end: date
+    ):
+        """Compute current KPIs + equal-length previous period + delta %."""
+        from app.schemas.analytics import KpiComparison
+
+        current = await self.kpi(restaurant, start, end)
+        span = (end - start)  # timedelta in days
+        prev_end = start - timedelta(days=1)
+        prev_start = prev_end - span
+        previous = await self.kpi(restaurant, prev_start, prev_end)
+        return KpiComparison(
+            current=current,
+            previous=previous,
+            delta_orders_count=self._delta_pct(
+                current.orders_count, previous.orders_count
+            ),
+            delta_guests_count=self._delta_pct(
+                current.guests_count, previous.guests_count
+            ),
+            delta_net_revenue=self._delta_pct(
+                current.net_revenue, previous.net_revenue
+            ),
+            delta_profit=self._delta_pct(current.profit, previous.profit),
+            delta_avg_check=self._delta_pct(current.avg_check, previous.avg_check),
+            delta_margin_percent=self._delta_pct(
+                current.margin_percent, previous.margin_percent
+            ),
+        )
+
+    async def heatmap_weekday_hour(
+        self,
+        restaurant: Restaurant,
+        start: date,
+        end: date,
+        *,
+        metric: str = "revenue",
+    ):
+        from app.schemas.analytics import Heatmap, HeatmapCell
+
+        s, e, tz = self._bounds(restaurant, start, end)
+        rows = await self.orders.heatmap_weekday_hour(restaurant.id, s, e, tz)
+        column = {
+            "revenue": "revenue",
+            "profit": "profit",
+            "orders": "orders_count",
+        }.get(metric, "revenue")
+        cells = [
+            HeatmapCell(
+                weekday=int(r["weekday"]),
+                hour=int(r["hour"]),
+                value=Decimal(str(r[column])),
+                orders_count=int(r["orders_count"]),
+            )
+            for r in rows
+        ]
+        return Heatmap(metric=metric, period_start=start, period_end=end, cells=cells)
+
+    @staticmethod
+    def _delta_pct(current, previous):
+        """Returns (current - previous) / previous * 100, or None if no baseline."""
+        cur = Decimal(str(current))
+        prev = Decimal(str(previous))
+        if prev == 0:
+            return None
+        return (cur - prev) / prev * Decimal("100")
+
     async def category_performance(
         self, restaurant: Restaurant, start: date, end: date
     ):
