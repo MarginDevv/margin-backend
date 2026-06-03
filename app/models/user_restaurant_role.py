@@ -2,17 +2,15 @@
 from __future__ import annotations
 
 import enum
-import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
-from app.models.mixins import RestaurantMixin
+from app.models.mixins import RestaurantMixin, UserMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -25,18 +23,12 @@ class Role(str, enum.Enum):
     STAFF = "staff"
 
 
-class UserRestaurantRole(TimestampedBase, RestaurantMixin):
+class UserRestaurantRole(TimestampedBase, RestaurantMixin, UserMixin):
     __tablename__ = "user_restaurant_roles"
     __table_args__ = (
         UniqueConstraint("user_id", "restaurant_id", name="uq_user_restaurant"),
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     role: Mapped[Role] = mapped_column(
         SqlEnum(Role, name="user_role", values_callable=lambda e: [m.value for m in e]),
         nullable=False,

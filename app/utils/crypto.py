@@ -13,6 +13,7 @@ from app.core.config import settings
 @lru_cache
 def _fernet() -> Fernet:
     """Derive a stable Fernet key from APP_SECRET_KEY."""
+    # pylint: disable-next=no-member  # pydantic-settings FieldInfo at lint time
     digest = hashlib.sha256(settings.app_secret_key.encode("utf-8")).digest()
     key = base64.urlsafe_b64encode(digest)
     return Fernet(key)

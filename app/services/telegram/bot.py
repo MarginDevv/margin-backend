@@ -102,7 +102,8 @@ async def on_start_with_token(message: Message, command: CommandObject) -> None:
                 chat_id=message.chat.id,
                 telegram_username=message.from_user.username if message.from_user else None,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+            # Bot handler must never crash — surface a friendly message instead.
             logger.warning("telegram.link.failed", error=str(exc))
             await message.answer(render_link_token_invalid())
             return

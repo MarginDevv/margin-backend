@@ -313,7 +313,7 @@ def bundle_candidate(dish: DishPerformance, q: DishQuantiles) -> Draft | None:
     doesn't fire) but still have good unit economics; bundling them with a
     bestseller lifts attach rate without sacrificing margin.
     """
-    if not (q.q1_qty < dish.quantity < q.q3_qty):
+    if dish.quantity <= q.q1_qty or dish.quantity >= q.q3_qty:
         return None
     if dish.margin_percent < q.avg_margin + BUNDLE_MARGIN_GAP:
         return None

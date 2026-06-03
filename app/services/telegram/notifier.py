@@ -250,4 +250,4 @@ class TelegramNotifier:
                 UserRestaurantRole.telegram_notifications.is_(True),
             )
         )
-        return [(u, m) for u, m in (await self.session.execute(stmt)).all()]
+        return list((await self.session.execute(stmt)).tuples().all())

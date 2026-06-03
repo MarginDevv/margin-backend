@@ -14,7 +14,9 @@ from app.repositories.base import BaseRepository
 class ReportRepository(BaseRepository[Report]):
     model = Report
 
-    async def get(
+    # Reports use a composite (restaurant, period, period_start) lookup key
+    # instead of the default UUID pk; the signature intentionally diverges.
+    async def get(  # pylint: disable=arguments-differ
         self, restaurant_id: uuid.UUID, period: ReportPeriod, period_start: date
     ) -> Report | None:
         stmt = select(Report).where(

@@ -27,4 +27,21 @@ class RestaurantMixin:
     )
 
 
-__all__ = ["RestaurantMixin"]
+class UserMixin:
+    """Adds a ``user_id`` FK column pointing at ``users.id``.
+
+    The column is indexed and non-nullable with ``ON DELETE CASCADE``.
+    Use it on join tables and per-user log rows; classes that need a
+    one-to-one mapping should declare ``user_id`` inline with ``unique=True``
+    instead.
+    """
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+
+__all__ = ["RestaurantMixin", "UserMixin"]

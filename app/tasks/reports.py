@@ -157,7 +157,8 @@ def schedule_due_daily_reports() -> int:
             continue
         try:
             tz = ZoneInfo(restaurant.timezone or "Europe/Moscow")
-        except Exception:
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+            # zoneinfo can raise several error types; bad data shouldn't kill the cron.
             logger.warning("reports.schedule.bad_tz", restaurant_id=str(restaurant.id))
             continue
         now_local = datetime.now(tz).replace(tzinfo=None)

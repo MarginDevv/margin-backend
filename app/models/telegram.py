@@ -2,33 +2,26 @@
 from __future__ import annotations
 
 import enum
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import BigInteger, DateTime
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
-from app.models.mixins import RestaurantMixin
+from app.models.mixins import RestaurantMixin, UserMixin
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
     from app.models.user import User
 
 
-class TelegramLinkToken(TimestampedBase):
+class TelegramLinkToken(TimestampedBase, UserMixin):
     __tablename__ = "telegram_link_tokens"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -41,7 +34,7 @@ class DeliveryKind(str, enum.Enum):
     SYSTEM = "system"
 
 
-class TelegramDelivery(TimestampedBase, RestaurantMixin):
+class TelegramDelivery(TimestampedBase, RestaurantMixin, UserMixin):
     """Idempotency log for outbound notifications.
 
     Unique by (restaurant_id, user_id, kind, for_date) — re-runs of the digest
@@ -55,12 +48,6 @@ class TelegramDelivery(TimestampedBase, RestaurantMixin):
         ),
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
     kind: Mapped[DeliveryKind] = mapped_column(
         SqlEnum(DeliveryKind, name="telegram_delivery_kind", values_callable=lambda e: [m.value for m in e]),
         nullable=False,

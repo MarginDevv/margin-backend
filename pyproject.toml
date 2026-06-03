@@ -39,6 +39,7 @@ httpx = "^0.27.0"
 factory-boy = "^3.3.1"
 faker = "^28.0.0"
 aiosqlite = "^0.20.0"
+pylint = "^4.0.5"
 
 [build-system]
 requires = ["poetry-core"]
@@ -76,3 +77,51 @@ addopts = "-ra --strict-markers --cov=app --cov-report=term-missing"
 branch = true
 source = ["app"]
 omit = ["app/main.py", "alembic/*"]
+
+[tool.pylint.main]
+# Match ruff's line length so the two linters don't disagree.
+max-line-length = 100
+# Don't try to import optional-dep packages just to introspect them.
+ignore = ["alembic"]
+
+[tool.pylint."messages control"]
+# Disable rules that are noisy/redundant or fire only on framework patterns
+# already covered by ruff + mypy.
+disable = [
+    # SQLAlchemy 2.x dynamic ``func.<name>`` — pylint can't see these attrs.
+    "not-callable",
+    # Pydantic / dataclass / SA models legitimately have few public methods.
+    "too-few-public-methods",
+    # Already enforced by ruff (E501).
+    "line-too-long",
+    # Already enforced by ruff (F401).
+    "unused-import",
+    # FastAPI / Pydantic patterns rely on many keyword args; thresholds here
+    # generate noise without finding real issues.
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    # Lazy imports avoid circular-import cycles in this codebase by design.
+    "import-outside-toplevel",
+    # Docstrings: covered by class-level comments and type hints; enforcing
+    # at every helper / dataclass field adds noise, not signal.
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "missing-class-docstring",
+    # SQLAlchemy 2.x's canonical way to extract row->dict is ``row._mapping``.
+    "protected-access",
+    # Module-level singletons (FastAPI bot/dispatcher, async session factory)
+    # use lower_case or PascalCase by convention.
+    "invalid-name",
+    # Singletons initialised on first webhook request require ``global``.
+    "global-statement",
+]
+
+[tool.pylint.design]
+max-args = 8
+max-locals = 20
+max-branches = 15
+
+[tool.pylint.format]
+max-line-length = 100
