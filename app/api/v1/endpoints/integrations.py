@@ -46,7 +46,6 @@ async def create_integration(
         restaurant_id=restaurant.id,
         api_login=encrypt_str(payload.api_login),
         organization_id=payload.organization_id,
-        terminal_group_id=payload.terminal_group_id,
     )
     session.add(integration)
     await session.commit()

@@ -26,12 +26,11 @@ class IikoIntegration(TimestampedBase):
         index=True,
     )
 
-    # iikoCloud API login (apiLogin) — secret, stored as-is for now (encrypt before prod).
-    api_login: Mapped[str] = mapped_column(String(255), nullable=False)
     # Organization ID inside iiko (one integration → primary organization).
     organization_id: Mapped[str | None] = mapped_column(String(64), index=True)
-    # Default terminal group id used for queries.
-    terminal_group_id: Mapped[str | None] = mapped_column(String(64))
+
+    # iikoCloud API login (apiLogin) — secret, stored as-is for now (encrypt before prod).
+    api_login: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Cached access token + its expiry.
     access_token: Mapped[str | None] = mapped_column(String(512))

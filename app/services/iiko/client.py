@@ -10,7 +10,6 @@ Endpoints we use (POST, JSON; base_url already includes ``/api/1``):
                                                  /api/v2/access_token is the
                                                  modern replacement, migration TODO)
     /organizations                             — list orgs available for apiLogin
-    /terminal_groups                           — list terminal groups for orgs
     /nomenclature                              — menu (revision-based delta sync)
     /deliveries/by_delivery_date_and_status    — orders by date range; despite
                                                  the URL it returns dine-in
@@ -142,12 +141,6 @@ class IikoClient:
     async def organizations(self) -> list[dict[str, Any]]:
         data = await self._request("/organizations", {})
         return data.get("organizations", [])
-
-    async def terminal_groups(self, organization_ids: list[str]) -> list[dict[str, Any]]:
-        data = await self._request(
-            "/terminal_groups", {"organizationIds": organization_ids}
-        )
-        return data.get("terminalGroups", [])
 
     async def nomenclature(
         self, organization_id: str, *, start_revision: int = 0
