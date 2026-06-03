@@ -1,7 +1,7 @@
 """Datetime helpers — timezone-aware, ISO weekday math."""
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from zoneinfo import ZoneInfo
 
 from app.core.config import settings
@@ -41,6 +41,15 @@ def week_bounds_local(any_day: date, tz: ZoneInfo) -> tuple[datetime, datetime, 
     return start_local.astimezone(UTC), end_local.astimezone(UTC), monday, sunday
 
 
-def iiko_dt(value: datetime) -> str:
-    """Format datetime for iikoCloud API: 'YYYY-MM-DD HH:MM:SS.000'."""
-    return value.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S.000")
+def iiko_dt(value: datetime, tz: tzinfo | None = None) -> str:
+    """Format datetime for iikoCloud Transport API: ``YYYY-MM-DD HH:MM:SS.000``.
+
+    iikoCloud Transport API expects date filters in **restaurant-local time**
+    (swagger: "Local for delivery terminal"). Pass ``tz`` of the restaurant
+    to convert from UTC; if omitted, falls back to UTC.
+
+    The fractional-seconds suffix is hard-coded to ``.000`` — sub-second
+    precision isn't meaningful for the report ranges we query.
+    """
+    target_tz = tz or UTC
+    return value.astimezone(target_tz).strftime("%Y-%m-%d %H:%M:%S.000")

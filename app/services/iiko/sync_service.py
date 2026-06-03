@@ -13,6 +13,7 @@ from app.models.activity_event import ActivityKind, ActivitySeverity
 from app.repositories.integration_repo import IikoIntegrationRepository
 from app.repositories.menu_repo import MenuItemRepository
 from app.repositories.order_repo import OrderRepository
+from app.repositories.restaurant_repo import RestaurantRepository
 from app.services.activity.event_service import ActivityEventService
 from app.services.iiko.client import IikoClient
 from app.services.iiko.transformers import (
@@ -20,7 +21,7 @@ from app.services.iiko.transformers import (
     sales_doc_to_order,
 )
 from app.utils.crypto import decrypt_str
-from app.utils.datetime import now_utc
+from app.utils.datetime import now_utc, restaurant_tz
 
 logger = get_logger("iiko.sync")
 
@@ -58,9 +59,28 @@ class IikoSyncService:
                 if not orgs:
                     raise IikoIntegrationError("iiko returned no organizations for apiLogin")
                 integration.organization_id = orgs[0]["id"]
-            data = await client.nomenclature(integration.organization_id)
+            start_revision = integration.last_menu_revision or 0
+            data = await client.nomenclature(
+                integration.organization_id, start_revision=start_revision
+            )
+            new_revision = int(data.get("revision") or 0)
+
+            # iiko returns the same revision + empty lists when nothing changed.
+            if new_revision == start_revision and start_revision != 0:
+                await self._persist_token(integration, client)
+                integration.last_sync_at = now_utc()
+                integration.last_sync_error = None
+                await self.session.commit()
+                logger.info(
+                    "iiko.nomenclature.unchanged",
+                    restaurant_id=str(restaurant_id),
+                    revision=new_revision,
+                )
+                return 0
+
             rows = nomenclature_to_menu_rows(restaurant_id, data)
             count = await self.menu.upsert_many(rows)
+            integration.last_menu_revision = new_revision
             await self._persist_token(integration, client)
             integration.last_sync_at = now_utc()
             integration.last_sync_error = None
@@ -69,6 +89,7 @@ class IikoSyncService:
                 "iiko.nomenclature.synced",
                 restaurant_id=str(restaurant_id),
                 items=count,
+                revision=new_revision,
             )
             return count
         except Exception as exc:
@@ -85,6 +106,11 @@ class IikoSyncService:
         date_to: datetime,
     ) -> int:
         client, integration = await self._build_client(restaurant_id)
+        restaurant = await RestaurantRepository(self.session).get(restaurant_id)
+        if not restaurant:
+            await client.aclose()
+            raise NotFoundError("Restaurant not found")
+        local_tz = restaurant_tz(restaurant.timezone)
         try:
             if not integration.organization_id:
                 orgs = await client.organizations()
@@ -96,6 +122,7 @@ class IikoSyncService:
                 organization_ids=[integration.organization_id],
                 date_from=date_from,
                 date_to=date_to,
+                local_tz=local_tz,
             )
             menu_items = await self.menu.list_for_restaurant(restaurant_id)
             lookup = {m.iiko_product_id: m for m in menu_items}
@@ -167,8 +194,7 @@ class IikoSyncService:
         self, restaurant_id: uuid.UUID, day: datetime
     ) -> int:
         """Re-sync the full local day for the given timezone of the restaurant."""
-        from app.repositories.restaurant_repo import RestaurantRepository
-        from app.utils.datetime import day_bounds_local, restaurant_tz
+        from app.utils.datetime import day_bounds_local
 
         restaurant = await RestaurantRepository(self.session).get(restaurant_id)
         if not restaurant:

@@ -12,7 +12,7 @@ Endpoints we use (POST, JSON):
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from typing import Any
 
 import httpx
@@ -134,8 +134,22 @@ class IikoClient:
         )
         return data.get("terminalGroups", [])
 
-    async def nomenclature(self, organization_id: str) -> dict[str, Any]:
-        return await self._request("/nomenclature", {"organizationId": organization_id})
+    async def nomenclature(
+        self, organization_id: str, *, start_revision: int = 0
+    ) -> dict[str, Any]:
+        """Fetch nomenclature, optionally as a diff from ``start_revision``.
+
+        Per /api/1/nomenclature spec: when ``startRevision`` equals the
+        ``revision`` of the last full response, iiko returns the same
+        ``revision`` value with empty ``groups`` / ``productCategories`` /
+        ``products`` / ``sizes`` lists. Callers should compare the returned
+        ``revision`` to the one they passed to decide whether anything
+        changed.
+        """
+        return await self._request(
+            "/nomenclature",
+            {"organizationId": organization_id, "startRevision": start_revision},
+        )
 
     async def orders_by_period(
         self,
@@ -143,16 +157,23 @@ class IikoClient:
         date_from: datetime,
         date_to: datetime,
         statuses: list[str] | None = None,
+        *,
+        local_tz: tzinfo | None = None,
     ) -> list[dict[str, Any]]:
         """Fetch closed-cheque sales (documents/sales/by_organizations).
-        date_from / date_to are UTC datetimes; iiko expects 'YYYY-MM-DD HH:MM:SS.fff'.
+
+        ``date_from`` / ``date_to`` are UTC datetimes. iikoCloud Transport
+        API expects filter dates in the restaurant's local timezone (swagger:
+        "Local for delivery terminal"). Pass ``local_tz`` to convert before
+        serialisation; if omitted, dates are sent as-is in UTC (legacy
+        behaviour, only correct when the restaurant itself is in UTC).
         """
         from app.utils.datetime import iiko_dt
 
         payload: dict[str, Any] = {
             "organizationIds": organization_ids,
-            "dateFrom": iiko_dt(date_from),
-            "dateTo": iiko_dt(date_to),
+            "dateFrom": iiko_dt(date_from, tz=local_tz),
+            "dateTo": iiko_dt(date_to, tz=local_tz),
         }
         if statuses:
             payload["statuses"] = statuses

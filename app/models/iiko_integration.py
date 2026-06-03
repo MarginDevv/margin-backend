@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,5 +40,8 @@ class IikoIntegration(TimestampedBase):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_sync_error: Mapped[str | None] = mapped_column(String(1024))
+    # Latest /api/1/nomenclature `revision` we processed; passed back as
+    # ``startRevision`` to fetch only the delta on the next sync. NULL = first run.
+    last_menu_revision: Mapped[int | None] = mapped_column(BigInteger)
 
     restaurant: Mapped["Restaurant"] = relationship(back_populates="iiko_integration")
