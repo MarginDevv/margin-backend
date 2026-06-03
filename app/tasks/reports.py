@@ -104,7 +104,7 @@ def sync_day_then_build_daily(self, restaurant_id: str, for_date_iso: str) -> st
             day=day.isoformat(),
             error=str(exc),
         )
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
 @celery_app.task(name="app.tasks.reports.build_daily_reports_all")
@@ -157,7 +157,7 @@ def schedule_due_daily_reports() -> int:
             continue
         try:
             tz = ZoneInfo(restaurant.timezone or "Europe/Moscow")
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
             # zoneinfo can raise several error types; bad data shouldn't kill the cron.
             logger.warning("reports.schedule.bad_tz", restaurant_id=str(restaurant.id))
             continue

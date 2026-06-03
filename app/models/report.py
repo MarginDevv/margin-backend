@@ -6,9 +6,8 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date
+from sqlalchemy import Date, Integer, Numeric, UniqueConstraint
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import Integer, Numeric, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

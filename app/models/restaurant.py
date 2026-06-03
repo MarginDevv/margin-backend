@@ -1,9 +1,8 @@
 """Restaurant (tenant) model."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
