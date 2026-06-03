@@ -43,5 +43,9 @@ class IikoIntegration(TimestampedBase):
     # Latest /api/1/nomenclature `revision` we processed; passed back as
     # ``startRevision`` to fetch only the delta on the next sync. NULL = first run.
     last_menu_revision: Mapped[int | None] = mapped_column(BigInteger)
+    # Latest ``maxRevision`` returned by /api/1/deliveries/by_revision (or
+    # /api/1/deliveries/by_delivery_date_and_status, both return it). Used as
+    # ``startRevision`` on the next incremental orders sync. NULL = first run.
+    last_orders_revision: Mapped[int | None] = mapped_column(BigInteger)
 
-    restaurant: Mapped["Restaurant"] = relationship(back_populates="iiko_integration")
+    restaurant: Mapped[Restaurant] = relationship(back_populates="iiko_integration")
