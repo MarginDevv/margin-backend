@@ -1,4 +1,5 @@
 """Symmetric encryption for sensitive credentials at rest."""
+
 from __future__ import annotations
 
 import base64

@@ -3,6 +3,7 @@
 Runs as a separate long-polling worker (see app/bot/__main__.py). Each handler
 opens its own AsyncSession, mirroring the FastAPI side.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -59,8 +60,7 @@ async def _resolve_user_by_chat(session: AsyncSession, chat_id: int) -> User | N
 
 async def _list_user_restaurants(session: AsyncSession, user: User) -> list[tuple[uuid.UUID, str]]:
     rows = await session.execute(
-        select(UserRestaurantRole.restaurant_id)
-        .where(UserRestaurantRole.user_id == user.id)
+        select(UserRestaurantRole.restaurant_id).where(UserRestaurantRole.user_id == user.id)
     )
     rids = [r[0] for r in rows.all()]
     if not rids:
@@ -204,9 +204,7 @@ async def _reply_with_report(
     if not restaurant:
         await message.answer("Ресторан не найден.")
         return
-    report = await ReportRepository(session).get(
-        restaurant_id, ReportPeriod.DAILY, day
-    )
+    report = await ReportRepository(session).get(restaurant_id, ReportPeriod.DAILY, day)
     if not report:
         await message.answer(
             f"Отчёт за {day.strftime('%d.%m.%Y')} ещё не готов. "

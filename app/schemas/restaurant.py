@@ -1,4 +1,5 @@
 """Restaurant schemas."""
+
 from __future__ import annotations
 
 import re
@@ -16,6 +17,7 @@ _TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 class WorkingHoursDay(BaseModel):
     """Open / close times in HH:MM. close < open ⇒ spans midnight."""
+
     open: str = Field(description="HH:MM, restaurant-local time")
     close: str = Field(description="HH:MM, restaurant-local time")
 

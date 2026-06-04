@@ -9,6 +9,7 @@ Code format: 8 uppercase characters from an unambiguous alphabet (no 0/O/1/I/L).
 Collisions are resolved by retrying. Codes are issued lazily — `get_or_issue`
 generates one only when the user first needs it.
 """
+
 from __future__ import annotations
 
 import secrets
@@ -78,9 +79,7 @@ class ReferralService:
         )
         return await self.session.scalar(stmt)
 
-    async def attach_referrer(
-        self, restaurant: Restaurant, code: str | None
-    ) -> User | None:
+    async def attach_referrer(self, restaurant: Restaurant, code: str | None) -> User | None:
         if not code:
             return None
         referrer = await self.find_referrer(code)
@@ -154,9 +153,12 @@ class ReferralService:
             bucket[status.value] = {"count": int(count), "amount": Decimal(str(amount))}
 
         # referred restaurant count
-        ref_count = await self.session.scalar(
-            select(func.count(Restaurant.id)).where(Restaurant.referrer_user_id == user_id)
-        ) or 0
+        ref_count = (
+            await self.session.scalar(
+                select(func.count(Restaurant.id)).where(Restaurant.referrer_user_id == user_id)
+            )
+            or 0
+        )
 
         return {
             "referred_restaurants": int(ref_count),

@@ -14,6 +14,7 @@ Chat:
     Authorization: Bearer <token>
     JSON: { model, messages: [{role, content}], temperature, max_tokens }
 """
+
 from __future__ import annotations
 
 import base64
@@ -97,9 +98,7 @@ class GigaChatClient:
         ):
             return self._token
 
-        basic = base64.b64encode(
-            f"{self._client_id}:{self._client_secret}".encode()
-        ).decode()
+        basic = base64.b64encode(f"{self._client_id}:{self._client_secret}".encode()).decode()
         headers = {
             "Authorization": f"Basic {basic}",
             "RqUID": str(uuid.uuid4()),
@@ -109,9 +108,7 @@ class GigaChatClient:
         body = {"scope": self._scope}
         response = await self._auth.post("/api/v2/oauth", headers=headers, data=body)
         if response.status_code >= 400:
-            raise LLMError(
-                f"GigaChat oauth failed [{response.status_code}]: {response.text[:300]}"
-            )
+            raise LLMError(f"GigaChat oauth failed [{response.status_code}]: {response.text[:300]}")
         data = response.json()
         token = data.get("access_token")
         if not token:
@@ -155,9 +152,7 @@ class GigaChatClient:
         )
         async for attempt in retryer:
             with attempt:
-                response = await self._api.post(
-                    "/chat/completions", headers=headers, json=payload
-                )
+                response = await self._api.post("/chat/completions", headers=headers, json=payload)
                 if response.status_code == 401:
                     self._token = None
                     token = await self._ensure_token()
@@ -166,13 +161,10 @@ class GigaChatClient:
                         "/chat/completions", headers=headers, json=payload
                     )
                 if response.status_code == 429 or 500 <= response.status_code < 600:
-                    raise _TransientError(
-                        f"gigachat {response.status_code}: {response.text[:300]}"
-                    )
+                    raise _TransientError(f"gigachat {response.status_code}: {response.text[:300]}")
                 if response.status_code >= 400:
                     raise LLMError(
-                        f"gigachat chat failed [{response.status_code}]: "
-                        f"{response.text[:300]}"
+                        f"gigachat chat failed [{response.status_code}]: " f"{response.text[:300]}"
                     )
                 data = response.json()
                 choice = (data.get("choices") or [{}])[0]

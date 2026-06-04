@@ -1,4 +1,5 @@
 """Celery tasks for iiko synchronization."""
+
 from __future__ import annotations
 
 import uuid
@@ -33,7 +34,7 @@ def incremental_sync_restaurant(self, restaurant_id: str) -> int:
 def full_sync_restaurant(self, restaurant_id: str) -> int:
     """Full re-sync of yesterday + nomenclature refresh for a single restaurant."""
     rid = uuid.UUID(restaurant_id)
-    yesterday = (now_utc() - timedelta(days=1))
+    yesterday = now_utc() - timedelta(days=1)
 
     async def _job(session):
         svc = IikoSyncService(session)

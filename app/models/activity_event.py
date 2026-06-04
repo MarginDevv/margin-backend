@@ -1,4 +1,5 @@
 """Activity feed: append-only log of events visible in the web dashboard."""
+
 from __future__ import annotations
 
 import enum
@@ -52,7 +53,8 @@ class ActivityEvent(TimestampedBase, RestaurantMixin):
     )
     severity: Mapped[ActivitySeverity] = mapped_column(
         SqlEnum(
-            ActivitySeverity, name="activity_severity",
+            ActivitySeverity,
+            name="activity_severity",
             values_callable=lambda e: [m.value for m in e],
         ),
         nullable=False,

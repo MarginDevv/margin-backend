@@ -1,4 +1,5 @@
 """Smoke tests for password hashing and JWT round-trip."""
+
 from __future__ import annotations
 
 import os

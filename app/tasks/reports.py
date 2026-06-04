@@ -1,4 +1,5 @@
 """Celery tasks for report generation."""
+
 from __future__ import annotations
 
 import uuid
@@ -182,9 +183,7 @@ def schedule_due_daily_reports() -> int:
 
 def build_daily_on_demand(restaurant_id: uuid.UUID, for_date: date) -> str:
     """Queue an on-demand daily report build (sync + build). Returns the task id."""
-    task = sync_day_then_build_daily.apply_async(
-        args=[str(restaurant_id), for_date.isoformat()]
-    )
+    task = sync_day_then_build_daily.apply_async(args=[str(restaurant_id), for_date.isoformat()])
     return task.id
 
 

@@ -1,4 +1,5 @@
 """Recommendation enhancer parses LLM JSON and degrades gracefully."""
+
 from __future__ import annotations
 
 import os
@@ -30,9 +31,7 @@ async def test_enhancer_disabled_when_no_llm() -> None:
 
     enhancer = RecommendationEnhancer(llm=None)
     assert enhancer.enabled is False
-    desc, action = await enhancer.enhance(
-        title="t", description="d", action="a"
-    )
+    desc, action = await enhancer.enhance(title="t", description="d", action="a")
     assert (desc, action) == ("d", "a")
 
 
@@ -40,10 +39,7 @@ async def test_enhancer_disabled_when_no_llm() -> None:
 async def test_enhancer_uses_llm_json() -> None:
     from app.services.llm.recommendation_enhancer import RecommendationEnhancer
 
-    payload = (
-        '{"description": "Новое описание с фактом 12%.", '
-        '"action": "Поднять цену на 6%."}'
-    )
+    payload = '{"description": "Новое описание с фактом 12%.", ' '"action": "Поднять цену на 6%."}'
     enhancer = RecommendationEnhancer(llm=_FakeLLM(payload))
     desc, action = await enhancer.enhance(
         title="Поднять цену",
@@ -61,9 +57,7 @@ async def test_enhancer_strips_code_fence() -> None:
 
     payload = '```json\n{"description": "ok", "action": "go"}\n```'
     enhancer = RecommendationEnhancer(llm=_FakeLLM(payload))
-    desc, action = await enhancer.enhance(
-        title="x", description="d", action="a"
-    )
+    desc, action = await enhancer.enhance(title="x", description="d", action="a")
     assert desc == "ok"
     assert action == "go"
 
@@ -73,8 +67,6 @@ async def test_enhancer_falls_back_on_bad_json() -> None:
     from app.services.llm.recommendation_enhancer import RecommendationEnhancer
 
     enhancer = RecommendationEnhancer(llm=_FakeLLM("not json at all"))
-    desc, action = await enhancer.enhance(
-        title="x", description="orig-desc", action="orig-action"
-    )
+    desc, action = await enhancer.enhance(title="x", description="orig-desc", action="orig-action")
     assert desc == "orig-desc"
     assert action == "orig-action"

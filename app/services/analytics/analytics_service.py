@@ -1,4 +1,5 @@
 """Analytics queries on top of OrderRepository, returning Pydantic models."""
+
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta

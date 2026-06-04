@@ -10,6 +10,7 @@ Webhook mode does NOT keep a process — Telegram POSTs straight to the FastAPI
 app at /api/v1/webhooks/telegram/{secret}. In that case this command just
 registers the URL once and exits.
 """
+
 from __future__ import annotations
 
 import asyncio

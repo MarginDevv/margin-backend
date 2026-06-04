@@ -1,4 +1,5 @@
 """Telegram-related schemas."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -14,6 +15,7 @@ class TelegramLinkTokenResponse(BaseModel):
     The user clicks the URL → Telegram opens the bot with `/start <token>` →
     the bot links the chat id to the user.
     """
+
     token: str
     deep_link: str
     expires_at: datetime

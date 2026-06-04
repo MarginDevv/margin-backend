@@ -1,4 +1,5 @@
 """Subscription model bound to a restaurant."""
+
 from __future__ import annotations
 
 import enum
@@ -45,7 +46,8 @@ class Subscription(TimestampedBase):
     )
     plan: Mapped[SubscriptionPlan] = mapped_column(
         SqlEnum(
-            SubscriptionPlan, name="subscription_plan",
+            SubscriptionPlan,
+            name="subscription_plan",
             values_callable=lambda e: [m.value for m in e],
         ),
         nullable=False,
@@ -53,7 +55,8 @@ class Subscription(TimestampedBase):
     )
     status: Mapped[SubscriptionStatus] = mapped_column(
         SqlEnum(
-            SubscriptionStatus, name="subscription_status",
+            SubscriptionStatus,
+            name="subscription_status",
             values_callable=lambda e: [m.value for m in e],
         ),
         nullable=False,

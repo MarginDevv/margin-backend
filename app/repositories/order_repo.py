@@ -1,4 +1,5 @@
 """Order / OrderItem repository with analytics queries."""
+
 from __future__ import annotations
 
 import uuid
@@ -17,9 +18,7 @@ from app.repositories.base import BaseRepository
 class OrderRepository(BaseRepository[Order]):
     model = Order
 
-    async def get_by_iiko_id(
-        self, restaurant_id: uuid.UUID, iiko_order_id: str
-    ) -> Order | None:
+    async def get_by_iiko_id(self, restaurant_id: uuid.UUID, iiko_order_id: str) -> Order | None:
         stmt = select(Order).where(
             Order.restaurant_id == restaurant_id,
             Order.iiko_order_id == iiko_order_id,

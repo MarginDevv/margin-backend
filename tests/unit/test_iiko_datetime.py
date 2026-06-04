@@ -4,6 +4,7 @@ Background: iikoCloud Transport API expects date filters in the restaurant's
 local time (swagger: "Local for delivery terminal"). Earlier the helper always
 formatted as UTC, producing wrong cross-day ranges for non-UTC restaurants.
 """
+
 from __future__ import annotations
 
 import os

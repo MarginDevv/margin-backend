@@ -5,6 +5,7 @@ rewrites the description + action in natural, restaurant-owner-friendly
 Russian. If the LLM is unavailable or errors out, we keep the heuristic text
 unchanged — recommendations always go through.
 """
+
 from __future__ import annotations
 
 from app.core.logging import get_logger
@@ -18,7 +19,7 @@ SYSTEM_PROMPT = (
     "предлагаемое действие. Перепиши описание и действие на ясном деловом "
     "русском языке, как опытный консультант. Сохрани все числа и факты без "
     "изменений. Не добавляй обещаний и не используй маркетинговые штампы. "
-    "Ответ строго в JSON: {\"description\": \"...\", \"action\": \"...\"}. "
+    'Ответ строго в JSON: {"description": "...", "action": "..."}. '
     "Описание — 2-3 предложения, действие — 1 короткое предложение."
 )
 

@@ -1,4 +1,5 @@
 """Activity-feed endpoint powering the dashboard's «recent changes» view."""
+
 from __future__ import annotations
 
 from typing import Annotated

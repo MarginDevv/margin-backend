@@ -1,4 +1,5 @@
 """AI-generated daily recommendations for a restaurant."""
+
 from __future__ import annotations
 
 import enum
@@ -66,14 +67,16 @@ class Recommendation(TimestampedBase, RestaurantMixin):
 
     type: Mapped[RecommendationType] = mapped_column(
         SqlEnum(
-            RecommendationType, name="recommendation_type",
+            RecommendationType,
+            name="recommendation_type",
             values_callable=lambda e: [m.value for m in e],
         ),
         nullable=False,
     )
     priority: Mapped[RecommendationPriority] = mapped_column(
         SqlEnum(
-            RecommendationPriority, name="recommendation_priority",
+            RecommendationPriority,
+            name="recommendation_priority",
             values_callable=lambda e: [m.value for m in e],
         ),
         default=RecommendationPriority.MEDIUM,
@@ -81,7 +84,8 @@ class Recommendation(TimestampedBase, RestaurantMixin):
     )
     category: Mapped[RecommendationCategory] = mapped_column(
         SqlEnum(
-            RecommendationCategory, name="recommendation_category",
+            RecommendationCategory,
+            name="recommendation_category",
             values_callable=lambda e: [m.value for m in e],
         ),
         default=RecommendationCategory.OPERATIONS,
@@ -90,7 +94,8 @@ class Recommendation(TimestampedBase, RestaurantMixin):
     )
     effort: Mapped[RecommendationEffort] = mapped_column(
         SqlEnum(
-            RecommendationEffort, name="recommendation_effort",
+            RecommendationEffort,
+            name="recommendation_effort",
             values_callable=lambda e: [m.value for m in e],
         ),
         default=RecommendationEffort.MEDIUM,
@@ -98,7 +103,8 @@ class Recommendation(TimestampedBase, RestaurantMixin):
     )
     status: Mapped[RecommendationStatus] = mapped_column(
         SqlEnum(
-            RecommendationStatus, name="recommendation_status",
+            RecommendationStatus,
+            name="recommendation_status",
             values_callable=lambda e: [m.value for m in e],
         ),
         default=RecommendationStatus.NEW,

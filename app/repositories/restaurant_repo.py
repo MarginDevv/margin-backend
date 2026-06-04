@@ -1,4 +1,5 @@
 """Restaurant repository."""
+
 from __future__ import annotations
 
 import uuid
@@ -36,9 +37,7 @@ class UserRestaurantRoleRepository(BaseRepository[UserRestaurantRole]):
         return await self.session.scalar(stmt)
 
     async def list_members(self, restaurant_id: uuid.UUID) -> list[UserRestaurantRole]:
-        stmt = select(UserRestaurantRole).where(
-            UserRestaurantRole.restaurant_id == restaurant_id
-        )
+        stmt = select(UserRestaurantRole).where(UserRestaurantRole.restaurant_id == restaurant_id)
         return list((await self.session.scalars(stmt)).all())
 
     async def assign(
@@ -49,7 +48,5 @@ class UserRestaurantRoleRepository(BaseRepository[UserRestaurantRole]):
             existing.role = role
             await self.session.flush()
             return existing
-        entity = UserRestaurantRole(
-            user_id=user_id, restaurant_id=restaurant_id, role=role
-        )
+        entity = UserRestaurantRole(user_id=user_id, restaurant_id=restaurant_id, role=role)
         return await self.add(entity)

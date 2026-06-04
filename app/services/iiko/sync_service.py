@@ -1,4 +1,5 @@
 """High-level iiko sync orchestration."""
+
 from __future__ import annotations
 
 import uuid
@@ -40,9 +41,7 @@ class IikoSyncService:
         if not (integration.api_key and integration.app_id and integration.client_secret):
             # All three are required by /api/v2/access_token; the model
             # holds them as nullable for migration-reversibility only.
-            raise IikoIntegrationError(
-                "iiko integration is missing apiKey / appId / clientSecret"
-            )
+            raise IikoIntegrationError("iiko integration is missing apiKey / appId / clientSecret")
         client = IikoClient(
             api_key=integration.api_key,
             app_id=integration.app_id,
@@ -196,9 +195,7 @@ class IikoSyncService:
             processed += 1
         return processed
 
-    async def incremental_sync(
-        self, restaurant_id: uuid.UUID, *, window_minutes: int = 30
-    ) -> int:
+    async def incremental_sync(self, restaurant_id: uuid.UUID, *, window_minutes: int = 30) -> int:
         """Pull orders that changed since the last successful sync.
 
         Prefers ``/api/1/deliveries/by_revision`` (cheap delta) when we have
@@ -229,13 +226,9 @@ class IikoSyncService:
                 frm = floor
             return await self.sync_orders(restaurant_id, frm, to)
 
-        return await self._sync_orders_by_revision(
-            restaurant_id, integration.last_orders_revision
-        )
+        return await self._sync_orders_by_revision(restaurant_id, integration.last_orders_revision)
 
-    async def _sync_orders_by_revision(
-        self, restaurant_id: uuid.UUID, start_revision: int
-    ) -> int:
+    async def _sync_orders_by_revision(self, restaurant_id: uuid.UUID, start_revision: int) -> int:
         client, integration = await self._build_client(restaurant_id)
         try:
             if not integration.organization_id:
@@ -300,9 +293,7 @@ class IikoSyncService:
         finally:
             await client.aclose()
 
-    async def full_day_sync(
-        self, restaurant_id: uuid.UUID, day: datetime
-    ) -> int:
+    async def full_day_sync(self, restaurant_id: uuid.UUID, day: datetime) -> int:
         """Re-sync the full local day for the given timezone of the restaurant."""
         from app.utils.datetime import day_bounds_local
 

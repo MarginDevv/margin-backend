@@ -4,6 +4,7 @@ The aiogram dispatcher (services/telegram/bot.py) is a separate concern — this
 module is used by Celery workers / FastAPI to push messages without spinning up
 a full bot framework.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -29,6 +30,7 @@ class TelegramApiError(DomainError):
 
 class TelegramRecipientError(DomainError):
     """Recipient-specific: blocked us, chat deleted, etc. Should NOT retry."""
+
     code = "telegram_recipient_error"
 
 

@@ -1,4 +1,5 @@
 """Authentication & registration service."""
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,14 +45,10 @@ class AuthService:
         await self.session.flush()
 
         if data.referral_code:
-            await ReferralService(self.session).attach_referrer(
-                restaurant, data.referral_code
-            )
+            await ReferralService(self.session).attach_referrer(restaurant, data.referral_code)
 
         self.session.add(
-            UserRestaurantRole(
-                user_id=user.id, restaurant_id=restaurant.id, role=Role.OWNER
-            )
+            UserRestaurantRole(user_id=user.id, restaurant_id=restaurant.id, role=Role.OWNER)
         )
         self.session.add(
             Subscription(

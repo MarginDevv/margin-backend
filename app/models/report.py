@@ -1,4 +1,5 @@
 """Cached daily / weekly reports for fast dashboard reads."""
+
 from __future__ import annotations
 
 import enum
@@ -28,7 +29,9 @@ class Report(TimestampedBase, RestaurantMixin):
     __tablename__ = "reports"
     __table_args__ = (
         UniqueConstraint(
-            "restaurant_id", "period", "period_start",
+            "restaurant_id",
+            "period",
+            "period_start",
             name="uq_report_restaurant_period",
         ),
     )
@@ -43,22 +46,34 @@ class Report(TimestampedBase, RestaurantMixin):
     orders_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     guests_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     gross_revenue: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     net_revenue: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     total_food_cost: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     profit: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     avg_check: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     margin_percent: Mapped[Decimal] = mapped_column(
-        Numeric(7, 4), default=Decimal("0"), nullable=False,
+        Numeric(7, 4),
+        default=Decimal("0"),
+        nullable=False,
     )
 
     # Free-form breakdowns (top dishes, by-hour, by-day-of-week, etc.).

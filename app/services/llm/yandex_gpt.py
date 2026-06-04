@@ -10,6 +10,7 @@ POST https://llm.api.cloud.yandex.net/foundationModels/v1/completion
     "messages": [{"role": "system|user|assistant", "text": "..."}]
   }
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -101,13 +102,10 @@ class YandexGPTClient:
                     json=payload,
                 )
                 if response.status_code == 429 or 500 <= response.status_code < 600:
-                    raise _TransientError(
-                        f"yandex {response.status_code}: {response.text[:300]}"
-                    )
+                    raise _TransientError(f"yandex {response.status_code}: {response.text[:300]}")
                 if response.status_code >= 400:
                     raise LLMError(
-                        f"yandex chat failed [{response.status_code}]: "
-                        f"{response.text[:300]}"
+                        f"yandex chat failed [{response.status_code}]: " f"{response.text[:300]}"
                     )
                 data = response.json()
                 result = data.get("result") or {}

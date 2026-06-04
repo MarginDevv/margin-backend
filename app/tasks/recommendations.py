@@ -1,4 +1,5 @@
 """Celery tasks for recommendation generation."""
+
 from __future__ import annotations
 
 import uuid
@@ -24,7 +25,9 @@ def generate_daily(restaurant_id: str, for_date_iso: str | None = None) -> int:
     count = run_async(with_session(_job))
     logger.info(
         "recs.generated",
-        restaurant_id=restaurant_id, count=count, for_date=target.isoformat(),
+        restaurant_id=restaurant_id,
+        count=count,
+        for_date=target.isoformat(),
     )
 
     # Once recs are ready, ask the notifier to push the digest. The digest task

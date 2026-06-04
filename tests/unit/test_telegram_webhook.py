@@ -1,4 +1,5 @@
 """Webhook endpoint secret-verification."""
+
 from __future__ import annotations
 
 import importlib

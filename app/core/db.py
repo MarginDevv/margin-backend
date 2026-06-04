@@ -1,4 +1,5 @@
 """Async SQLAlchemy 2.0 engine, session factory and Base."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator

@@ -1,4 +1,5 @@
 """Write activity events. Intentionally tiny — readers go through the repo."""
+
 from __future__ import annotations
 
 import uuid

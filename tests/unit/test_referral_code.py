@@ -1,4 +1,5 @@
 """Referral code generator: alphabet and length."""
+
 from __future__ import annotations
 
 import os
@@ -21,11 +22,12 @@ def test_codes_are_random() -> None:
     from app.services.referral.referral_service import _gen_code
 
     seen = {_gen_code() for _ in range(50)}
-    assert len(seen) > 40   # vanishingly small chance of >10 collisions in 50
+    assert len(seen) > 40  # vanishingly small chance of >10 collisions in 50
 
 
 def test_build_referral_url_with_base() -> None:
     import importlib
+
     os.environ["APP_BASE_URL"] = "https://app.margin.example"
     from app.core import config
 

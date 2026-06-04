@@ -1,4 +1,5 @@
 """Bridge between sync Celery tasks and async services."""
+
 from __future__ import annotations
 
 import asyncio

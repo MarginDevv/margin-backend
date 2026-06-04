@@ -3,6 +3,7 @@
 Telegram parse_mode=HTML supports: <b>, <i>, <u>, <s>, <code>, <pre>, <a>.
 We render messages in Russian since this is the primary product locale.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -28,11 +29,7 @@ def _pct(value: Decimal | float) -> str:
 
 
 def escape_html(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def render_daily_digest(

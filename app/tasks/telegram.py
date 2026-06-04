@@ -1,4 +1,5 @@
 """Celery tasks for outbound Telegram delivery."""
+
 from __future__ import annotations
 
 import uuid

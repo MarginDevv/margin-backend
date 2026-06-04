@@ -1,4 +1,5 @@
 """Restaurant CRUD + membership management."""
+
 from __future__ import annotations
 
 import uuid
@@ -51,11 +52,7 @@ async def create_restaurant(
         from app.services.referral.referral_service import ReferralService
 
         await ReferralService(session).attach_referrer(restaurant, referral_code)
-    session.add(
-        UserRestaurantRole(
-            user_id=user.id, restaurant_id=restaurant.id, role=Role.OWNER
-        )
-    )
+    session.add(UserRestaurantRole(user_id=user.id, restaurant_id=restaurant.id, role=Role.OWNER))
     session.add(
         Subscription(
             restaurant_id=restaurant.id,
@@ -108,9 +105,7 @@ async def add_member(
     if payload.role == Role.OWNER:
         # Allow multiple owners only via explicit superuser path — block here for safety.
         raise ConflictError("Cannot assign 'owner' role via invite; transfer ownership instead")
-    link = await UserRestaurantRoleRepository(session).assign(
-        user.id, restaurant.id, payload.role
-    )
+    link = await UserRestaurantRoleRepository(session).assign(user.id, restaurant.id, payload.role)
     await session.commit()
     return MemberRead.model_validate(link)
 

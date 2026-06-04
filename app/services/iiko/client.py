@@ -30,6 +30,7 @@ because iiko mixes ``/api/1`` and ``/api/v2`` in the same host::
                                                      offset from current
                                                      maxRevision
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, tzinfo
@@ -140,9 +141,7 @@ class IikoClient:
                 # Every Transport API response carries a correlationId — log
                 # it on success and embed it in error messages so support
                 # tickets can be cross-referenced with iiko's server logs.
-                correlation_id = (
-                    data.get("correlationId") if isinstance(data, dict) else None
-                )
+                correlation_id = data.get("correlationId") if isinstance(data, dict) else None
                 if isinstance(data, dict) and data.get("errorDescription"):
                     raise IikoIntegrationError(
                         f"iiko {path} business error "
@@ -238,9 +237,7 @@ class IikoClient:
         }
         if statuses:
             payload["statuses"] = statuses
-        data = await self._request(
-            "/api/1/deliveries/by_delivery_date_and_status", payload
-        )
+        data = await self._request("/api/1/deliveries/by_delivery_date_and_status", payload)
         return _extract_orders(data)
 
     async def orders_by_revision(

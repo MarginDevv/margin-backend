@@ -1,4 +1,5 @@
 """User model."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -27,9 +28,7 @@ class User(TimestampedBase):
     telegram_username: Mapped[str | None] = mapped_column(String(64))
 
     # Public referral code. Auto-issued on demand (see ReferralService).
-    referral_code: Mapped[str | None] = mapped_column(
-        String(16), unique=True, index=True
-    )
+    referral_code: Mapped[str | None] = mapped_column(String(16), unique=True, index=True)
 
     roles: Mapped[list[UserRestaurantRole]] = relationship(
         back_populates="user",

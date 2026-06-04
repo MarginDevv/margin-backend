@@ -1,4 +1,5 @@
 """Telegram link/unlink and per-restaurant subscription endpoints."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, status
@@ -35,9 +36,7 @@ async def status_(user: CurrentUser) -> TelegramStatus:
     status_code=status.HTTP_201_CREATED,
     summary="Generate a deep-link the web client opens to link Telegram",
 )
-async def create_link_token(
-    user: CurrentUser, session: DbSession
-) -> TelegramLinkTokenResponse:
+async def create_link_token(user: CurrentUser, session: DbSession) -> TelegramLinkTokenResponse:
     token, bot_username = await TelegramLinkService(session).create_token(user)
     return TelegramLinkTokenResponse(
         token=token.token,

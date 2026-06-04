@@ -1,4 +1,5 @@
 """iiko integration endpoints."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -95,9 +96,7 @@ async def trigger_sync(
 
     from app.tasks.iiko_sync import full_sync_restaurant, incremental_sync_restaurant
 
-    task = (full_sync_restaurant if full else incremental_sync_restaurant).delay(
-        str(restaurant.id)
-    )
+    task = (full_sync_restaurant if full else incremental_sync_restaurant).delay(str(restaurant.id))
     return IikoSyncTriggerResponse(task_id=task.id, queued_at=now_utc())
 
 

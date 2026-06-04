@@ -1,4 +1,5 @@
 """FastAPI application entry point."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -28,8 +29,7 @@ def create_app() -> FastAPI:
         title="Margin API",
         version="0.1.0",
         description=(
-            "AI-manager for restaurants. "
-            "iikoCloud integration + analytics + recommendations."
+            "AI-manager for restaurants. " "iikoCloud integration + analytics + recommendations."
         ),
         docs_url="/docs",
         redoc_url="/redoc",

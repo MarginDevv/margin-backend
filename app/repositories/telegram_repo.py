@@ -1,4 +1,5 @@
 """Telegram link-token and delivery repositories."""
+
 from __future__ import annotations
 
 import uuid

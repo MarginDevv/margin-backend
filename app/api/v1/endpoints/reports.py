@@ -1,4 +1,5 @@
 """Reports endpoints — read cached reports and trigger on-demand rebuilds."""
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta

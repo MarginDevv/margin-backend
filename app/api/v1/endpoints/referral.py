@@ -1,4 +1,5 @@
 """Referral program endpoints."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -15,9 +16,7 @@ router = APIRouter()
 
 
 @router.get("", response_model=ReferralProfile, summary="Мой реферальный профиль и сводка")
-async def my_referral(
-    user: CurrentUser, session: DbSession
-) -> ReferralProfile:
+async def my_referral(user: CurrentUser, session: DbSession) -> ReferralProfile:
     service = ReferralService(session)
     code = await service.get_or_issue_code(user)
     summary = await service.summary_for_referrer(user.id)

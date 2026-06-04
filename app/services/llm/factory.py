@@ -4,6 +4,7 @@ Usage:
     async with get_llm() as llm:
         result = await llm.chat([LLMMessage("user", "...")])
 """
+
 from __future__ import annotations
 
 from app.core.config import settings

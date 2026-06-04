@@ -1,4 +1,5 @@
 """Recommendation repository."""
+
 from __future__ import annotations
 
 import uuid
@@ -33,6 +34,7 @@ class RecommendationRepository(BaseRepository[Recommendation]):
 
     async def delete_for_date(self, restaurant_id: uuid.UUID, for_date: date) -> int:
         from sqlalchemy import delete as sql_delete
+
         result = await self.session.execute(
             sql_delete(Recommendation).where(
                 Recommendation.restaurant_id == restaurant_id,

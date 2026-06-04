@@ -1,4 +1,5 @@
 """User self-service endpoints."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter
@@ -28,9 +29,7 @@ async def update_me(payload: UserUpdate, user: CurrentUser, session: DbSession) 
 
 
 @router.post("/me/password", status_code=204)
-async def change_password(
-    payload: PasswordChange, user: CurrentUser, session: DbSession
-) -> None:
+async def change_password(payload: PasswordChange, user: CurrentUser, session: DbSession) -> None:
     if not verify_password(payload.current_password, user.password_hash):
         raise AuthenticationError("Current password is incorrect")
     user.password_hash = hash_password(payload.new_password)

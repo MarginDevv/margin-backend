@@ -1,4 +1,5 @@
 """Referral payouts repository."""
+
 from __future__ import annotations
 
 import uuid
@@ -20,14 +21,8 @@ class ReferralPayoutRepository(BaseRepository[ReferralPayout]):
         limit: int = 50,
         offset: int = 0,
     ) -> list[ReferralPayout]:
-        stmt = select(ReferralPayout).where(
-            ReferralPayout.referrer_user_id == referrer_user_id
-        )
+        stmt = select(ReferralPayout).where(ReferralPayout.referrer_user_id == referrer_user_id)
         if statuses:
             stmt = stmt.where(ReferralPayout.status.in_(statuses))
-        stmt = (
-            stmt.order_by(ReferralPayout.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        stmt = stmt.order_by(ReferralPayout.created_at.desc()).limit(limit).offset(offset)
         return list((await self.session.scalars(stmt)).all())

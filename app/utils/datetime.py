@@ -1,4 +1,5 @@
 """Datetime helpers — timezone-aware, ISO weekday math."""
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time, timedelta, tzinfo

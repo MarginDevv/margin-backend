@@ -1,4 +1,5 @@
 """Generate and consume deep-link tokens for Telegram onboarding."""
+
 from __future__ import annotations
 
 import secrets

@@ -3,6 +3,7 @@
 Concrete impls (GigaChat, YandexGPT) implement `chat`. Callers should not depend
 on a specific provider — everything goes through `get_llm()`.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -53,6 +54,7 @@ class NoOpLLM:
     `chat` raises so callers can degrade gracefully — typically by falling back
     to deterministic templates.
     """
+
     provider_name = "noop"
 
     async def chat(

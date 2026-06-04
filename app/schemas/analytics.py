@@ -1,4 +1,5 @@
 """Analytics / dashboard schemas."""
+
 from __future__ import annotations
 
 import uuid
@@ -10,6 +11,7 @@ from app.schemas.common import ORMModel
 
 class KpiSummary(ORMModel):
     """Top-level KPI for a date range."""
+
     period_start: date
     period_end: date
     orders_count: int

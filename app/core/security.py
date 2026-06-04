@@ -1,4 +1,5 @@
 """Password hashing, JWT issue/verify, encryption helpers."""
+
 from __future__ import annotations
 
 import secrets

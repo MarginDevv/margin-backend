@@ -10,6 +10,7 @@ The dispatcher and Bot instance are created lazily and cached at module level â€
 each request reuses the same Bot session for outbound replies, so we keep one
 HTTP keepalive pool instead of opening a fresh client per update.
 """
+
 from __future__ import annotations
 
 from typing import Any

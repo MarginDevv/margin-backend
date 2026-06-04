@@ -10,6 +10,7 @@ In webhook mode:
 - Run `python -m app.bot delete-webhook` to revert (e.g. before switching
   back to polling).
 """
+
 from __future__ import annotations
 
 from urllib.parse import urljoin

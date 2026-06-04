@@ -1,4 +1,5 @@
 """Unit tests for due_business_day — the per-restaurant report scheduler."""
+
 from __future__ import annotations
 
 import os
@@ -11,8 +12,13 @@ os.environ.setdefault("JWT_SECRET_KEY", "y" * 32)
 def test_returns_none_when_hours_missing() -> None:
     from app.services.analytics.schedule_service import due_business_day
 
-    assert due_business_day(datetime(2026, 6, 2, 0, 0), None, delay_minutes=60, step_minutes=15) is None
-    assert due_business_day(datetime(2026, 6, 2, 0, 0), {}, delay_minutes=60, step_minutes=15) is None
+    assert (
+        due_business_day(datetime(2026, 6, 2, 0, 0), None, delay_minutes=60, step_minutes=15)
+        is None
+    )
+    assert (
+        due_business_day(datetime(2026, 6, 2, 0, 0), {}, delay_minutes=60, step_minutes=15) is None
+    )
 
 
 def test_same_day_close_within_window() -> None:

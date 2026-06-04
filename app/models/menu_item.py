@@ -1,4 +1,5 @@
 """Menu item / dish, synced from iiko nomenclature."""
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -28,10 +29,14 @@ class MenuItem(TimestampedBase, RestaurantMixin):
 
     # Pricing — sale price (with tax) and food cost / self-cost per unit.
     sale_price: Mapped[Decimal] = mapped_column(
-        Numeric(12, 2), default=Decimal("0"), nullable=False,
+        Numeric(12, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     food_cost: Mapped[Decimal] = mapped_column(
-        Numeric(12, 2), default=Decimal("0"), nullable=False,
+        Numeric(12, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     tax_rate: Mapped[Decimal] = mapped_column(Numeric(5, 4), default=Decimal("0"), nullable=False)
 

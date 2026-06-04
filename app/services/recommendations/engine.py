@@ -7,6 +7,7 @@ analytics. The engine orchestrates: fetch analytics → apply rules (see
 The rules themselves live in ``app.services.recommendations.rules`` as pure
 functions so they can be unit-tested without a DB.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -55,9 +56,7 @@ class RecommendationEngine:
         dishes = await self.analytics.dishes_top_bottom(
             restaurant, window_start, window_end, top_n=100
         )
-        weekday_points = await self.analytics.by_weekday(
-            restaurant, window_start, window_end
-        )
+        weekday_points = await self.analytics.by_weekday(restaurant, window_start, window_end)
 
         all_dishes = dishes.top + dishes.bottom
         drafts: list[Draft] = dish_drafts(all_dishes)

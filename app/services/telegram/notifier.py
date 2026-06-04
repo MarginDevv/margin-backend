@@ -8,6 +8,7 @@ Delivery is idempotent: a `TelegramDelivery` row with UNIQUE
 (restaurant_id, user_id, kind, for_date) guards against double-sends across
 retried Celery tasks.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -82,9 +83,7 @@ async def fetch_top_recommendations(
         .where(
             Recommendation.restaurant_id == restaurant_id,
             Recommendation.for_date == for_date,
-            Recommendation.status.in_(
-                [RecommendationStatus.NEW, RecommendationStatus.SEEN]
-            ),
+            Recommendation.status.in_([RecommendationStatus.NEW, RecommendationStatus.SEEN]),
         )
         .order_by(priority_rank, Recommendation.confidence.desc())
         .limit(limit)
@@ -96,9 +95,7 @@ class TelegramNotifier:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def deliver_daily_digest(
-        self, restaurant_id: uuid.UUID, for_date: date
-    ) -> DeliveryStats:
+    async def deliver_daily_digest(self, restaurant_id: uuid.UUID, for_date: date) -> DeliveryStats:
         stats = DeliveryStats()
 
         restaurant = await RestaurantRepository(self.session).get(restaurant_id)
@@ -116,9 +113,7 @@ class TelegramNotifier:
             )
             return stats
 
-        recs = await fetch_top_recommendations(
-            self.session, restaurant_id, for_date, limit=3
-        )
+        recs = await fetch_top_recommendations(self.session, restaurant_id, for_date, limit=3)
 
         subscribers = await self._list_subscribers(restaurant_id)
         if not subscribers:
@@ -188,9 +183,7 @@ class TelegramNotifier:
                     continue
 
                 claimed.sent_at = now_utc()
-                claimed.telegram_message_id = (
-                    int(result.get("message_id") or 0) or None
-                )
+                claimed.telegram_message_id = int(result.get("message_id") or 0) or None
                 claimed.payload = {"report_id": str(report.id), "rec_count": len(recs)}
                 stats.sent += 1
                 await self.session.commit()

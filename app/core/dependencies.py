@@ -1,4 +1,5 @@
 """FastAPI dependency injection: auth, RBAC, current restaurant."""
+
 from __future__ import annotations
 
 import uuid

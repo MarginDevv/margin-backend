@@ -10,6 +10,7 @@ so a shift that closes at 02:00 Tuesday belongs to business day = Monday.
 `due_business_day(now_local, hours, delay)` returns the business date whose
 "close + delay" falls in the half-open interval (now - step, now], or None.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta

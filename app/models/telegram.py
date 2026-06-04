@@ -1,4 +1,5 @@
 """Telegram link tokens (deep-link onboarding) and delivery records."""
+
 from __future__ import annotations
 
 import enum
@@ -39,17 +40,22 @@ class TelegramDelivery(TimestampedBase, RestaurantMixin, UserMixin):
     Unique by (restaurant_id, user_id, kind, for_date) — re-runs of the digest
     pipeline never spam users twice.
     """
+
     __tablename__ = "telegram_deliveries"
     __table_args__ = (
         UniqueConstraint(
-            "restaurant_id", "user_id", "kind", "for_date",
+            "restaurant_id",
+            "user_id",
+            "kind",
+            "for_date",
             name="uq_telegram_delivery",
         ),
     )
 
     kind: Mapped[DeliveryKind] = mapped_column(
         SqlEnum(
-            DeliveryKind, name="telegram_delivery_kind",
+            DeliveryKind,
+            name="telegram_delivery_kind",
             values_callable=lambda e: [m.value for m in e],
         ),
         nullable=False,

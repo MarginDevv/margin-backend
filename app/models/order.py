@@ -1,4 +1,5 @@
 """Order and OrderItem — facts table for analytics."""
+
 from __future__ import annotations
 
 import enum
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 class OrderStatus(str, enum.Enum):
     NEW = "new"
-    IN_PROGRESS = "in_progress"   # iiko 'Bill' — receipt printed, awaiting payment
+    IN_PROGRESS = "in_progress"  # iiko 'Bill' — receipt printed, awaiting payment
     CLOSED = "closed"
     CANCELED = "canceled"
     DELETED = "deleted"
@@ -30,16 +31,15 @@ class OrderStatus(str, enum.Enum):
 
 class OrderServiceType(str, enum.Enum):
     """iiko orderServiceType — dine-in vs delivery flavours."""
-    COMMON = "common"                       # dine-in / table service
+
+    COMMON = "common"  # dine-in / table service
     DELIVERY_BY_COURIER = "delivery_by_courier"
     DELIVERY_BY_CLIENT = "delivery_by_client"  # pickup
 
 
 class Order(TimestampedBase, RestaurantMixin):
     __tablename__ = "orders"
-    __table_args__ = (
-        UniqueConstraint("restaurant_id", "iiko_order_id", name="uq_order_iiko"),
-    )
+    __table_args__ = (UniqueConstraint("restaurant_id", "iiko_order_id", name="uq_order_iiko"),)
 
     iiko_order_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     iiko_order_number: Mapped[str | None] = mapped_column(String(32))
@@ -55,7 +55,8 @@ class Order(TimestampedBase, RestaurantMixin):
     # the dashboard filter "hall vs delivery" without re-parsing the payload.
     service_type: Mapped[OrderServiceType] = mapped_column(
         SqlEnum(
-            OrderServiceType, name="order_service_type",
+            OrderServiceType,
+            name="order_service_type",
             values_callable=lambda e: [m.value for m in e],
         ),
         default=OrderServiceType.COMMON,
@@ -68,19 +69,29 @@ class Order(TimestampedBase, RestaurantMixin):
 
     # Aggregated totals (computed at sync time for speed).
     gross_revenue: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     discount_amount: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     net_revenue: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     total_food_cost: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     profit: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
 
     restaurant: Mapped[Restaurant] = relationship(back_populates="orders")
@@ -109,25 +120,39 @@ class OrderItem(TimestampedBase):
     name_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
 
     quantity: Mapped[Decimal] = mapped_column(
-        Numeric(12, 3), default=Decimal("1"), nullable=False,
+        Numeric(12, 3),
+        default=Decimal("1"),
+        nullable=False,
     )
     unit_price: Mapped[Decimal] = mapped_column(
-        Numeric(12, 2), default=Decimal("0"), nullable=False,
+        Numeric(12, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     unit_food_cost: Mapped[Decimal] = mapped_column(
-        Numeric(12, 2), default=Decimal("0"), nullable=False,
+        Numeric(12, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     discount_amount: Mapped[Decimal] = mapped_column(
-        Numeric(12, 2), default=Decimal("0"), nullable=False,
+        Numeric(12, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     line_revenue: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     line_cost: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
     line_profit: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), default=Decimal("0"), nullable=False,
+        Numeric(14, 2),
+        default=Decimal("0"),
+        nullable=False,
     )
 
     order: Mapped[Order] = relationship(back_populates="items")

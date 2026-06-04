@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models."""
+
 from app.models.activity_event import ActivityEvent, ActivityKind, ActivitySeverity
 from app.models.base import Base, TimestampedBase
 from app.models.iiko_integration import IikoIntegration

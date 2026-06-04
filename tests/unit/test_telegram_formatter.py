@@ -1,8 +1,8 @@
 """Unit tests for HTML formatting of Telegram digests."""
+
 from __future__ import annotations
 
 import os
-import uuid
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
@@ -99,8 +99,8 @@ def test_link_success_handles_no_name() -> None:
 
 
 def test_priority_icons_present() -> None:
-    from app.services.telegram.formatter import PRIORITY_LABEL
     from app.models.recommendation import RecommendationPriority
+    from app.services.telegram.formatter import PRIORITY_LABEL
 
     assert PRIORITY_LABEL[RecommendationPriority.CRITICAL] == "🔴"
     assert PRIORITY_LABEL[RecommendationPriority.HIGH] == "🔸"

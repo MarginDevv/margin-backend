@@ -1,4 +1,5 @@
 """Test fixtures."""
+
 from __future__ import annotations
 
 import os
@@ -14,9 +15,8 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 @pytest_asyncio.fixture
 async def async_session() -> AsyncIterator:
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
     from app.models import Base
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:

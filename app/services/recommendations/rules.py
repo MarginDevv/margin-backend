@@ -12,6 +12,7 @@ Adding a rule:
    ``RecommendationPriority``.
 3. Wire it into ``RecommendationEngine`` (call site in ``engine.py``).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,8 +28,13 @@ from app.models.recommendation import (
 from app.schemas.analytics import DishPerformance, WeekdayPoint
 
 WEEKDAY_NAMES = [
-    "Понедельник", "Вторник", "Среда", "Четверг",
-    "Пятница", "Суббота", "Воскресенье",
+    "Понедельник",
+    "Вторник",
+    "Среда",
+    "Четверг",
+    "Пятница",
+    "Суббота",
+    "Воскресенье",
 ]
 
 # ---- Tunable thresholds (kept here so a future config layer can override) ----
@@ -129,6 +135,7 @@ def compute_dish_quantiles(dishes: list[DishPerformance]) -> DishQuantiles | Non
 
 # ---------- Per-dish rules ----------
 
+
 def remove_dish(dish: DishPerformance) -> Draft | None:
     """Chronic loss-maker: had sales but profit <= 0."""
     if not (dish.revenue > 0 and dish.profit <= Decimal("0")):
@@ -200,8 +207,7 @@ def price_up(dish: DishPerformance, q: DishQuantiles) -> Draft | None:
 def price_down(dish: DishPerformance, q: DishQuantiles) -> Draft | None:
     """High-margin item that barely sells — price may be the blocker."""
     if not (
-        dish.quantity <= q.q1_qty
-        and dish.margin_percent > q.avg_margin + PRICE_DOWN_MARGIN_GAP
+        dish.quantity <= q.q1_qty and dish.margin_percent > q.avg_margin + PRICE_DOWN_MARGIN_GAP
     ):
         return None
     return Draft(
@@ -247,6 +253,7 @@ def promote_dish(dish: DishPerformance, q: DishQuantiles) -> Draft | None:
 
 
 # ---- New per-dish rules ----
+
 
 def zero_movement(dish: DishPerformance) -> Draft | None:
     """Item present in the menu but with no sales over the 4-week window.
@@ -339,6 +346,7 @@ def bundle_candidate(dish: DishPerformance, q: DishQuantiles) -> Draft | None:
 
 # ---------- Per-dish orchestrator ----------
 
+
 def _dedupe_per_dish(per_dish: dict[Any, list[Draft]]) -> list[Draft]:
     """Apply per-dish dedup + cap rules:
 
@@ -418,6 +426,7 @@ def dish_drafts(dishes: list[DishPerformance]) -> list[Draft]:
 
 # ---------- Weekday rules ----------
 
+
 def weekday_draft(best: WeekdayPoint, worst: WeekdayPoint) -> Draft | None:
     """Recommend reinforcing the best weekday and addressing the worst."""
     if best.profit <= worst.profit:
@@ -475,8 +484,7 @@ def weekday_dead_zone(points: list[WeekdayPoint]) -> Draft | None:
             "Стоит пересмотреть график работы или маркетинговую активность."
         ),
         action=(
-            "Рассмотреть сокращение часов, доставку только, либо регулярную "
-            "акцию для этих дней."
+            "Рассмотреть сокращение часов, доставку только, либо регулярную " "акцию для этих дней."
         ),
         priority=RecommendationPriority.MEDIUM,
         category=RecommendationCategory.OPERATIONS,
@@ -491,6 +499,7 @@ def weekday_dead_zone(points: list[WeekdayPoint]) -> Draft | None:
 
 
 # ---------- Menu-level aggregating rules ----------
+
 
 def menu_concentration(dishes: list[DishPerformance]) -> Draft | None:
     """Detect dangerous revenue concentration in the top few dishes.

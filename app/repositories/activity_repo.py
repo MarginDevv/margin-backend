@@ -1,4 +1,5 @@
 """Activity-event repository."""
+
 from __future__ import annotations
 
 import uuid

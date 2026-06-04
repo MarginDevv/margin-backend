@@ -5,6 +5,7 @@ Payouts themselves (actual transfer of money) are out of scope of the v1 MVP —
 they'll plug into the billing module later. For now we keep an append-only log
 `referral_payouts` so we know who is owed how much.
 """
+
 from __future__ import annotations
 
 import enum
@@ -39,6 +40,7 @@ class ReferralPayout(TimestampedBase, RestaurantMixin):
     Created whenever a restaurant's subscription invoice closes successfully.
     Aggregation per period is done at read time.
     """
+
     __tablename__ = "referral_payouts"
 
     referrer_user_id: Mapped[uuid.UUID] = mapped_column(

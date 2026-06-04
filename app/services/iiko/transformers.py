@@ -1,4 +1,5 @@
 """Convert iiko payloads to DB-ready dicts."""
+
 from __future__ import annotations
 
 import uuid
@@ -31,8 +32,7 @@ def nomenclature_to_menu_rows(
     """
     products: list[dict[str, Any]] = nomenclature.get("products") or []
     category_map = {
-        c.get("id"): c.get("name")
-        for c in (nomenclature.get("productCategories") or [])
+        c.get("id"): c.get("name") for c in (nomenclature.get("productCategories") or [])
     }
 
     rows: list[dict[str, Any]] = []
@@ -45,18 +45,13 @@ def nomenclature_to_menu_rows(
         if p.get("isDeleted"):
             continue
         sale_price = _decimal(p.get("sellingPrice") or p.get("price") or 0)
-        food_cost = _decimal(
-            p.get("costPrice")
-            or p.get("estimatedPurchasePrice")
-            or 0
-        )
+        food_cost = _decimal(p.get("costPrice") or p.get("estimatedPurchasePrice") or 0)
         rows.append(
             {
                 "restaurant_id": restaurant_id,
                 "iiko_product_id": p["id"],
                 "name": p.get("name") or "Unnamed",
-                "category": category_map.get(p.get("productCategoryId"))
-                or p.get("groupName"),
+                "category": category_map.get(p.get("productCategoryId")) or p.get("groupName"),
                 "unit": (p.get("mainUnit") or {}).get("name")
                 if isinstance(p.get("mainUnit"), dict)
                 else p.get("mainUnit"),
@@ -247,10 +242,7 @@ def _make_row(
     row = {
         "menu_item_id": menu_item.id if menu_item else None,
         "iiko_product_id": product.get("id"),
-        "name_snapshot": (
-            product.get("name")
-            or (menu_item.name if menu_item else "Unknown")
-        ),
+        "name_snapshot": (product.get("name") or (menu_item.name if menu_item else "Unknown")),
         "quantity": qty,
         "unit_price": unit_price,
         "unit_food_cost": unit_food_cost,
