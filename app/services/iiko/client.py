@@ -73,7 +73,15 @@ class IikoClient:
         self._client = httpx.AsyncClient(
             base_url=settings.iiko_api_base_url,
             timeout=settings.iiko_http_timeout,
-            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                # Server-side per-request timeout. The OpenAPI spec documents
+                # this header on every endpoint (default 15s); we send our
+                # configured value so iiko's HTTP timeout matches our client
+                # timeout instead of cutting us off earlier.
+                "Timeout": str(settings.iiko_http_timeout),
+            },
         )
 
     async def __aenter__(self) -> IikoClient:
@@ -129,10 +137,22 @@ class IikoClient:
                         f"iiko {path} failed [{response.status_code}]: {response.text[:300]}"
                     )
                 data = response.json()
+                # Every Transport API response carries a correlationId — log
+                # it on success and embed it in error messages so support
+                # tickets can be cross-referenced with iiko's server logs.
+                correlation_id = (
+                    data.get("correlationId") if isinstance(data, dict) else None
+                )
                 if isinstance(data, dict) and data.get("errorDescription"):
                     raise IikoIntegrationError(
-                        f"iiko {path} business error: {data['errorDescription']}"
+                        f"iiko {path} business error "
+                        f"(correlationId={correlation_id}): {data['errorDescription']}"
                     )
+                logger.debug(
+                    "iiko.request.ok",
+                    path=path,
+                    correlation_id=correlation_id,
+                )
                 return data  # type: ignore[no-any-return]
         raise IikoIntegrationError(f"iiko {path} exhausted retries")
 
