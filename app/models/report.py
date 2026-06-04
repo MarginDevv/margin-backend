@@ -52,4 +52,4 @@ class Report(TimestampedBase, RestaurantMixin):
     # Free-form breakdowns (top dishes, by-hour, by-day-of-week, etc.).
     breakdown: Mapped[dict | None] = mapped_column(JSONB)
 
-    restaurant: Mapped["Restaurant"] = relationship(back_populates="reports")
+    restaurant: Mapped[Restaurant] = relationship(back_populates="reports")

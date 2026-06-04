@@ -58,5 +58,5 @@ class TelegramDelivery(TimestampedBase, RestaurantMixin, UserMixin):
     error: Mapped[str | None] = mapped_column(String(1024))
     payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
-    restaurant: Mapped["Restaurant"] = relationship()
-    user: Mapped["User"] = relationship()
+    restaurant: Mapped[Restaurant] = relationship()
+    user: Mapped[User] = relationship()

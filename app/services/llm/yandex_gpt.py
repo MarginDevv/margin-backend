@@ -56,7 +56,7 @@ class YandexGPTClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def __aenter__(self) -> "YandexGPTClient":
+    async def __aenter__(self) -> YandexGPTClient:
         return self
 
     async def __aexit__(self, *_exc: Any) -> None:

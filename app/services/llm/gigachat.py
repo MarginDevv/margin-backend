@@ -78,7 +78,7 @@ class GigaChatClient:
         await self._auth.aclose()
         await self._api.aclose()
 
-    async def __aenter__(self) -> "GigaChatClient":
+    async def __aenter__(self) -> GigaChatClient:
         return self
 
     async def __aexit__(self, *_exc: Any) -> None:

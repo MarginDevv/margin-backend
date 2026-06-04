@@ -97,4 +97,4 @@ class Recommendation(TimestampedBase, RestaurantMixin):
     confidence: Mapped[int] = mapped_column(Integer, default=70, nullable=False)
     payload: Mapped[dict | None] = mapped_column(JSONB)
 
-    restaurant: Mapped["Restaurant"] = relationship(back_populates="recommendations")
+    restaurant: Mapped[Restaurant] = relationship(back_populates="recommendations")

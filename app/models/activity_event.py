@@ -58,5 +58,5 @@ class ActivityEvent(TimestampedBase, RestaurantMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
-    restaurant: Mapped["Restaurant"] = relationship()
-    actor: Mapped["User | None"] = relationship()
+    restaurant: Mapped[Restaurant] = relationship()
+    actor: Mapped[User | None] = relationship()

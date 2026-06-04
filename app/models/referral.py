@@ -70,5 +70,5 @@ class ReferralPayout(TimestampedBase, RestaurantMixin):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(String(512))
 
-    referrer: Mapped["User"] = relationship()
-    restaurant: Mapped["Restaurant"] = relationship()
+    referrer: Mapped[User] = relationship()
+    restaurant: Mapped[Restaurant] = relationship()

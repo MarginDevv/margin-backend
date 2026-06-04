@@ -54,7 +54,7 @@ class TelegramClient:
             timeout=timeout,
         )
 
-    async def __aenter__(self) -> "TelegramClient":
+    async def __aenter__(self) -> TelegramClient:
         return self
 
     async def __aexit__(self, *_exc: Any) -> None:

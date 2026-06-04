@@ -73,8 +73,8 @@ class Order(TimestampedBase, RestaurantMixin):
     total_food_cost: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
     profit: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
 
-    restaurant: Mapped["Restaurant"] = relationship(back_populates="orders")
-    items: Mapped[list["OrderItem"]] = relationship(
+    restaurant: Mapped[Restaurant] = relationship(back_populates="orders")
+    items: Mapped[list[OrderItem]] = relationship(
         back_populates="order",
         cascade="all, delete-orphan",
         lazy="selectin",
@@ -106,5 +106,5 @@ class OrderItem(TimestampedBase):
     line_cost: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
     line_profit: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
 
-    order: Mapped["Order"] = relationship(back_populates="items")
-    menu_item: Mapped["MenuItem | None"] = relationship(back_populates="order_items")
+    order: Mapped[Order] = relationship(back_populates="items")
+    menu_item: Mapped[MenuItem | None] = relationship(back_populates="order_items")

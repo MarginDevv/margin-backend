@@ -36,5 +36,5 @@ class UserRestaurantRole(TimestampedBase, RestaurantMixin, UserMixin):
         Boolean, default=True, nullable=False
     )
 
-    user: Mapped["User"] = relationship(back_populates="roles", lazy="joined")
-    restaurant: Mapped["Restaurant"] = relationship(back_populates="roles", lazy="joined")
+    user: Mapped[User] = relationship(back_populates="roles", lazy="joined")
+    restaurant: Mapped[Restaurant] = relationship(back_populates="roles", lazy="joined")

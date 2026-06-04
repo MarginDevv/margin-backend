@@ -43,34 +43,34 @@ class Restaurant(TimestampedBase):
         index=True,
     )
 
-    roles: Mapped[list["UserRestaurantRole"]] = relationship(
+    roles: Mapped[list[UserRestaurantRole]] = relationship(
         back_populates="restaurant",
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-    subscription: Mapped["Subscription | None"] = relationship(
+    subscription: Mapped[Subscription | None] = relationship(
         back_populates="restaurant",
         uselist=False,
         cascade="all, delete-orphan",
     )
-    iiko_integration: Mapped["IikoIntegration | None"] = relationship(
+    iiko_integration: Mapped[IikoIntegration | None] = relationship(
         back_populates="restaurant",
         uselist=False,
         cascade="all, delete-orphan",
     )
-    menu_items: Mapped[list["MenuItem"]] = relationship(
+    menu_items: Mapped[list[MenuItem]] = relationship(
         back_populates="restaurant",
         cascade="all, delete-orphan",
     )
-    orders: Mapped[list["Order"]] = relationship(
+    orders: Mapped[list[Order]] = relationship(
         back_populates="restaurant",
         cascade="all, delete-orphan",
     )
-    recommendations: Mapped[list["Recommendation"]] = relationship(
+    recommendations: Mapped[list[Recommendation]] = relationship(
         back_populates="restaurant",
         cascade="all, delete-orphan",
     )
-    reports: Mapped[list["Report"]] = relationship(
+    reports: Mapped[list[Report]] = relationship(
         back_populates="restaurant",
         cascade="all, delete-orphan",
     )

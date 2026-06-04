@@ -31,7 +31,7 @@ class User(TimestampedBase):
         String(16), unique=True, index=True
     )
 
-    roles: Mapped[list["UserRestaurantRole"]] = relationship(
+    roles: Mapped[list[UserRestaurantRole]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="selectin",

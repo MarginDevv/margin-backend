@@ -58,4 +58,4 @@ class Subscription(TimestampedBase):
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    restaurant: Mapped["Restaurant"] = relationship(back_populates="subscription")
+    restaurant: Mapped[Restaurant] = relationship(back_populates="subscription")

@@ -33,8 +33,8 @@ class MenuItem(TimestampedBase, RestaurantMixin):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    restaurant: Mapped["Restaurant"] = relationship(back_populates="menu_items")
-    order_items: Mapped[list["OrderItem"]] = relationship(back_populates="menu_item")
+    restaurant: Mapped[Restaurant] = relationship(back_populates="menu_items")
+    order_items: Mapped[list[OrderItem]] = relationship(back_populates="menu_item")
 
     @property
     def margin_per_unit(self) -> Decimal:
