@@ -58,11 +58,13 @@ src = ["app", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF", "ASYNC"]
-ignore = ["B008", "N805"]
+# RUF001/RUF002/RUF003: ambiguous-unicode hits every Cyrillic letter in the
+# product's Russian-language user-facing strings; nothing actionable to fix.
+ignore = ["B008", "N805", "RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/*" = ["E501"]
-"tests/*" = ["B011"]
+"tests/*" = ["B011", "E501", "N806"]
 
 [tool.mypy]
 python_version = "3.11"

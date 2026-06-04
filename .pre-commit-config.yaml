@@ -1,0 +1,36 @@
+# Run with: pre-commit install (one-time) and pre-commit run --all-files (manual).
+# Hooks here mirror the gates in .github/workflows/ci.yml so CI failures show up
+# locally first.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        args: ["app"]
+        pass_filenames: false
+        additional_dependencies:
+          - pydantic>=2.8
+          - sqlalchemy>=2.0
+          - types-redis
+        stages: [manual]
