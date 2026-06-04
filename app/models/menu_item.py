@@ -27,8 +27,12 @@ class MenuItem(TimestampedBase, RestaurantMixin):
     unit: Mapped[str | None] = mapped_column(String(32))
 
     # Pricing — sale price (with tax) and food cost / self-cost per unit.
-    sale_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"), nullable=False)
-    food_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"), nullable=False)
+    sale_price: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), default=Decimal("0"), nullable=False,
+    )
+    food_cost: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), default=Decimal("0"), nullable=False,
+    )
     tax_rate: Mapped[Decimal] = mapped_column(Numeric(5, 4), default=Decimal("0"), nullable=False)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

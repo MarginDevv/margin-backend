@@ -42,12 +42,24 @@ class Report(TimestampedBase, RestaurantMixin):
 
     orders_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     guests_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    gross_revenue: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
-    net_revenue: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
-    total_food_cost: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
-    profit: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
-    avg_check: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"), nullable=False)
-    margin_percent: Mapped[Decimal] = mapped_column(Numeric(7, 4), default=Decimal("0"), nullable=False)
+    gross_revenue: Mapped[Decimal] = mapped_column(
+        Numeric(14, 2), default=Decimal("0"), nullable=False,
+    )
+    net_revenue: Mapped[Decimal] = mapped_column(
+        Numeric(14, 2), default=Decimal("0"), nullable=False,
+    )
+    total_food_cost: Mapped[Decimal] = mapped_column(
+        Numeric(14, 2), default=Decimal("0"), nullable=False,
+    )
+    profit: Mapped[Decimal] = mapped_column(
+        Numeric(14, 2), default=Decimal("0"), nullable=False,
+    )
+    avg_check: Mapped[Decimal] = mapped_column(
+        Numeric(14, 2), default=Decimal("0"), nullable=False,
+    )
+    margin_percent: Mapped[Decimal] = mapped_column(
+        Numeric(7, 4), default=Decimal("0"), nullable=False,
+    )
 
     # Free-form breakdowns (top dishes, by-hour, by-day-of-week, etc.).
     breakdown: Mapped[dict | None] = mapped_column(JSONB)

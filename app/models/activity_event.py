@@ -51,7 +51,10 @@ class ActivityEvent(TimestampedBase, RestaurantMixin):
         index=True,
     )
     severity: Mapped[ActivitySeverity] = mapped_column(
-        SqlEnum(ActivitySeverity, name="activity_severity", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            ActivitySeverity, name="activity_severity",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=ActivitySeverity.INFO,
     )

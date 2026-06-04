@@ -44,12 +44,18 @@ class Subscription(TimestampedBase):
         index=True,
     )
     plan: Mapped[SubscriptionPlan] = mapped_column(
-        SqlEnum(SubscriptionPlan, name="subscription_plan", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            SubscriptionPlan, name="subscription_plan",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=SubscriptionPlan.FREE_TRIAL,
     )
     status: Mapped[SubscriptionStatus] = mapped_column(
-        SqlEnum(SubscriptionStatus, name="subscription_status", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            SubscriptionStatus, name="subscription_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=SubscriptionStatus.TRIAL,
     )

@@ -27,7 +27,10 @@ def create_app() -> FastAPI:
     fastapi_app = FastAPI(
         title="Margin API",
         version="0.1.0",
-        description="AI-manager for restaurants. iikoCloud integration + analytics + recommendations.",
+        description=(
+            "AI-manager for restaurants. "
+            "iikoCloud integration + analytics + recommendations."
+        ),
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",

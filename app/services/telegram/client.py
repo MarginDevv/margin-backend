@@ -102,7 +102,9 @@ class TelegramClient:
                 if not data.get("ok"):
                     description = (data.get("description") or "").lower()
                     if any(p in description for p in _PERMANENT_DESCRIPTIONS):
-                        raise TelegramRecipientError(data.get("description") or "recipient unavailable")
+                        raise TelegramRecipientError(
+                            data.get("description") or "recipient unavailable"
+                        )
                     raise TelegramApiError(f"{method}: {data.get('description') or data}")
                 return data.get("result", {})  # type: ignore[no-any-return]
         raise TelegramApiError(f"{method}: retries exhausted")

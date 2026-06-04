@@ -48,7 +48,10 @@ class TelegramDelivery(TimestampedBase, RestaurantMixin, UserMixin):
     )
 
     kind: Mapped[DeliveryKind] = mapped_column(
-        SqlEnum(DeliveryKind, name="telegram_delivery_kind", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            DeliveryKind, name="telegram_delivery_kind",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
     )
     for_date: Mapped[str | None] = mapped_column(String(10))  # ISO date or null for system

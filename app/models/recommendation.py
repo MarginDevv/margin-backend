@@ -65,27 +65,42 @@ class Recommendation(TimestampedBase, RestaurantMixin):
     for_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
 
     type: Mapped[RecommendationType] = mapped_column(
-        SqlEnum(RecommendationType, name="recommendation_type", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            RecommendationType, name="recommendation_type",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
     )
     priority: Mapped[RecommendationPriority] = mapped_column(
-        SqlEnum(RecommendationPriority, name="recommendation_priority", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            RecommendationPriority, name="recommendation_priority",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=RecommendationPriority.MEDIUM,
         nullable=False,
     )
     category: Mapped[RecommendationCategory] = mapped_column(
-        SqlEnum(RecommendationCategory, name="recommendation_category", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            RecommendationCategory, name="recommendation_category",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=RecommendationCategory.OPERATIONS,
         nullable=False,
         index=True,
     )
     effort: Mapped[RecommendationEffort] = mapped_column(
-        SqlEnum(RecommendationEffort, name="recommendation_effort", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            RecommendationEffort, name="recommendation_effort",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=RecommendationEffort.MEDIUM,
         nullable=False,
     )
     status: Mapped[RecommendationStatus] = mapped_column(
-        SqlEnum(RecommendationStatus, name="recommendation_status", values_callable=lambda e: [m.value for m in e]),
+        SqlEnum(
+            RecommendationStatus, name="recommendation_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=RecommendationStatus.NEW,
         nullable=False,
     )
