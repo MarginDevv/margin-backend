@@ -93,10 +93,22 @@ def sales_doc_to_order(
     The deliveries endpoints wrap every order in an ``OrderInfo`` envelope
     containing creation metadata; the actual order body sits in
     ``order_info["order"]``. Items use a ``type`` discriminator
-    (``Product`` / ``Compound`` / ``Service``); only ``Product`` items are
-    mapped here — combos and service charges are intentionally ignored
-    so they don't pollute the per-dish aggregates the recommendation
-    engine reads.
+    (``Product`` / ``Compound`` / ``Service``):
+
+    * ``Product`` — regular menu item, one DB row per line.
+    * ``Compound`` — split dish (e.g. half-half pizza). The parent line has
+      ``primaryComponent`` + optional ``secondaryComponent``; each component
+      carries its own ``product`` / ``price`` / ``cost`` / ``resultSum``.
+      We fan out into one sub-row per component so per-dish stats correctly
+      attribute revenue to each half.
+    * ``Service`` — service charges (delivery fee, tip lines etc.). Skipped
+      so they don't pollute per-dish aggregates.
+
+    Combo bundles are NOT this type discriminator — they appear as ordinary
+    Product items tagged with ``comboInformation``, plus a separate
+    ``Order.combos[]`` header array. We let the Product items flow through
+    as-is; the combo discount is already baked into each constituent line's
+    ``resultSum``.
 
     Aggregates (``net_revenue``, ``profit`` etc.) are recomputed from
     item lines rather than read from ``order.sum`` so the numbers stay
@@ -115,59 +127,24 @@ def sales_doc_to_order(
     total_cost = Decimal("0")
 
     for line in order_data.get("items") or []:
-        # Skip non-product items (combo wrappers + service charges).
-        if line.get("type") not in (None, "Product"):
-            continue
         if line.get("deleted"):  # item was struck from the order
             continue
 
-        product = line.get("product") or {}
-        iiko_product_id = product.get("id")
-        menu_item = menu_lookup.get(iiko_product_id) if iiko_product_id else None
+        line_type = line.get("type") or "Product"
+        if line_type == "Product":
+            sub_rows = [_build_item_row(line, menu_lookup)]
+        elif line_type == "Compound":
+            sub_rows = _expand_compound(line, menu_lookup)
+        else:
+            # Service charges and any future discriminator values.
+            continue
 
-        qty = _decimal(line.get("amount") or 1)
-        unit_price = _decimal(line.get("price") or 0)
-        # ``cost`` is per-unit by spec ("Total cost per item without tax,
-        # discounts/surcharges"). Fall back to the menu snapshot when iiko
-        # omits it (e.g. a service item slipped through filters).
-        unit_food_cost = _decimal(
-            line.get("cost")
-            if line.get("cost") is not None
-            else (menu_item.food_cost if menu_item else 0)
-        )
-
-        gross = unit_price * qty
-        # ``resultSum`` is the line total guests actually pay (price minus
-        # discounts plus surcharges). Use it directly as line_revenue
-        # because computing discount from individual modifier rows is
-        # error-prone and the API already did the math.
-        result_sum = line.get("resultSum")
-        line_revenue = _decimal(result_sum) if result_sum is not None else gross
-        line_discount = gross - line_revenue if line_revenue < gross else Decimal("0")
-        line_cost = unit_food_cost * qty
-        line_profit = line_revenue - line_cost
-
-        item_rows.append(
-            {
-                "menu_item_id": menu_item.id if menu_item else None,
-                "iiko_product_id": iiko_product_id,
-                "name_snapshot": (
-                    product.get("name")
-                    or (menu_item.name if menu_item else "Unknown")
-                ),
-                "quantity": qty,
-                "unit_price": unit_price,
-                "unit_food_cost": unit_food_cost,
-                "discount_amount": line_discount,
-                "line_revenue": line_revenue,
-                "line_cost": line_cost,
-                "line_profit": line_profit,
-            }
-        )
-        total_gross += gross
-        total_discount += line_discount
-        total_net += line_revenue
-        total_cost += line_cost
+        for row, gross in sub_rows:
+            item_rows.append(row)
+            total_gross += gross
+            total_discount += row["discount_amount"]
+            total_net += row["line_revenue"]
+            total_cost += row["line_cost"]
 
     operator = order_data.get("operator") or {}
 
@@ -189,6 +166,101 @@ def sales_doc_to_order(
         "profit": total_net - total_cost,
     }
     return order_row, item_rows
+
+
+def _build_item_row(
+    line: dict[str, Any], menu_lookup: dict[str, MenuItem]
+) -> tuple[dict[str, Any], Decimal]:
+    """Map a ``ProductOrderItem`` into ``(item_row, gross_for_aggregates)``."""
+    product = line.get("product") or {}
+    menu_item = _lookup(menu_lookup, product.get("id"))
+    return _make_row(
+        product=product,
+        menu_item=menu_item,
+        qty=_decimal(line.get("amount") or 1),
+        unit_price=_decimal(line.get("price") or 0),
+        unit_food_cost=_resolve_unit_cost(line.get("cost"), menu_item),
+        result_sum=line.get("resultSum"),
+    )
+
+
+def _expand_compound(
+    line: dict[str, Any], menu_lookup: dict[str, MenuItem]
+) -> list[tuple[dict[str, Any], Decimal]]:
+    """Expand a ``CompoundOrderItem`` into one sub-row per component.
+
+    Both components are priced individually; the parent line's ``amount``
+    is the count of *whole* compound items. We multiply each component's
+    per-unit ``price`` by that quantity, which matches how iiko bills the
+    line (component prices are already split: a half-half pizza component
+    holds half the menu price).
+    """
+    qty = _decimal(line.get("amount") or 1)
+    rows: list[tuple[dict[str, Any], Decimal]] = []
+    for key in ("primaryComponent", "secondaryComponent"):
+        comp = line.get(key)
+        if not comp:
+            continue
+        product = comp.get("product") or {}
+        menu_item = _lookup(menu_lookup, product.get("id"))
+        rows.append(
+            _make_row(
+                product=product,
+                menu_item=menu_item,
+                qty=qty,
+                unit_price=_decimal(comp.get("price") or 0),
+                unit_food_cost=_resolve_unit_cost(comp.get("cost"), menu_item),
+                result_sum=comp.get("resultSum"),
+            )
+        )
+    return rows
+
+
+def _make_row(
+    *,
+    product: dict[str, Any],
+    menu_item: MenuItem | None,
+    qty: Decimal,
+    unit_price: Decimal,
+    unit_food_cost: Decimal,
+    result_sum: Any,
+) -> tuple[dict[str, Any], Decimal]:
+    """Build an item_row dict + return the gross used for aggregates."""
+    gross = unit_price * qty
+    # ``resultSum`` is the line total the guest actually pays (price minus
+    # discounts plus surcharges). Use it as line_revenue when present so we
+    # don't have to reconstruct the discount from modifier rows.
+    line_revenue = _decimal(result_sum) if result_sum is not None else gross
+    line_discount = gross - line_revenue if line_revenue < gross else Decimal("0")
+    line_cost = unit_food_cost * qty
+    row = {
+        "menu_item_id": menu_item.id if menu_item else None,
+        "iiko_product_id": product.get("id"),
+        "name_snapshot": (
+            product.get("name")
+            or (menu_item.name if menu_item else "Unknown")
+        ),
+        "quantity": qty,
+        "unit_price": unit_price,
+        "unit_food_cost": unit_food_cost,
+        "discount_amount": line_discount,
+        "line_revenue": line_revenue,
+        "line_cost": line_cost,
+        "line_profit": line_revenue - line_cost,
+    }
+    return row, gross
+
+
+def _resolve_unit_cost(line_cost: Any, menu_item: MenuItem | None) -> Decimal:
+    """Use the iiko-reported per-unit cost; fall back to the menu snapshot."""
+    if line_cost is not None:
+        return _decimal(line_cost)
+    return menu_item.food_cost if menu_item else Decimal("0")
+
+
+def _lookup(menu_lookup: dict[str, MenuItem], pid: Any) -> MenuItem | None:
+    """Safe menu_lookup access — narrows ``Any | None`` from JSON payloads."""
+    return menu_lookup.get(pid) if isinstance(pid, str) else None
 
 
 def _derive_status(order_data: dict[str, Any]) -> OrderStatus:

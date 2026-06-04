@@ -181,20 +181,70 @@ def test_sales_doc_uses_cancel_info_not_status_for_cancellation() -> None:
     assert order_row["status"].value == "canceled"
 
 
-def test_sales_doc_skips_non_product_items() -> None:
-    """Combo wrappers and service items must not contribute to per-dish stats."""
+def test_sales_doc_skips_service_items() -> None:
+    """Service charges (delivery fee, tips lines) must not pollute per-dish stats."""
     from app.services.iiko.transformers import sales_doc_to_order
 
     info = _order_info(items=[
         _product_item(product_id="p1", price=500, cost=150),
         {"type": "Service", "amount": 1, "price": 100, "cost": 0,
          "product": {"id": "srv", "name": "Service charge"}},
-        {"type": "Compound", "amount": 1, "price": 0, "cost": 0,
-         "primaryComponent": {}},
     ])
     _, item_rows = sales_doc_to_order(uuid.uuid4(), info, menu_lookup={})
+    assert {r["iiko_product_id"] for r in item_rows} == {"p1"}
+
+
+def test_sales_doc_expands_compound_into_components() -> None:
+    """A half-half pizza (CompoundOrderItem) produces one sub-row per component."""
+    from app.services.iiko.transformers import sales_doc_to_order
+
+    info = _order_info(items=[{
+        "type": "Compound",
+        "amount": 1,
+        "primaryComponent": {
+            "product": {"id": "half-mushroom", "name": "Half Mushroom"},
+            "price": 300, "cost": 100, "resultSum": 280,
+        },
+        "secondaryComponent": {
+            "product": {"id": "half-pepperoni", "name": "Half Pepperoni"},
+            "price": 400, "cost": 150, "resultSum": 380,
+        },
+    }])
+    order_row, item_rows = sales_doc_to_order(uuid.uuid4(), info, menu_lookup={})
+
+    assert len(item_rows) == 2
+    by_id = {r["iiko_product_id"]: r for r in item_rows}
+    assert by_id["half-mushroom"]["line_revenue"] == Decimal("280")
+    assert by_id["half-mushroom"]["line_cost"] == Decimal("100")
+    assert by_id["half-pepperoni"]["line_revenue"] == Decimal("380")
+    assert by_id["half-pepperoni"]["line_cost"] == Decimal("150")
+
+    # Aggregates sum across both halves.
+    assert order_row["net_revenue"] == Decimal("660")        # 280 + 380
+    assert order_row["total_food_cost"] == Decimal("250")    # 100 + 150
+    assert order_row["profit"] == Decimal("410")
+    # Combined discount: gross 700 - revenue 660 = 40.
+    assert order_row["discount_amount"] == Decimal("40")
+
+
+def test_sales_doc_compound_without_secondary_component() -> None:
+    """primaryComponent is required; secondaryComponent is optional."""
+    from app.services.iiko.transformers import sales_doc_to_order
+
+    info = _order_info(items=[{
+        "type": "Compound",
+        "amount": 2,                                  # two whole compounds
+        "primaryComponent": {
+            "product": {"id": "only", "name": "Only"},
+            "price": 500, "cost": 200,
+        },
+    }])
+    _, item_rows = sales_doc_to_order(uuid.uuid4(), info, menu_lookup={})
     assert len(item_rows) == 1
-    assert item_rows[0]["iiko_product_id"] == "p1"
+    row = item_rows[0]
+    assert row["quantity"] == Decimal("2")
+    assert row["line_revenue"] == Decimal("1000")     # price * qty (no resultSum)
+    assert row["line_cost"] == Decimal("400")
 
 
 def test_sales_doc_skips_voided_items() -> None:
