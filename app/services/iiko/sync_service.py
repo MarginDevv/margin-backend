@@ -37,9 +37,16 @@ class IikoSyncService:
         integration = await self.integrations.get_by_restaurant(restaurant_id)
         if not integration or not integration.is_active:
             raise NotFoundError("iiko integration is not configured or inactive")
-        api_login = decrypt_str(integration.api_login)
+        if not (integration.api_key and integration.app_id and integration.client_secret):
+            # All three are required by /api/v2/access_token; the model
+            # holds them as nullable for migration-reversibility only.
+            raise IikoIntegrationError(
+                "iiko integration is missing apiKey / appId / clientSecret"
+            )
         client = IikoClient(
-            api_login,
+            api_key=integration.api_key,
+            app_id=integration.app_id,
+            client_secret=decrypt_str(integration.client_secret),
             cached_token=integration.access_token,
             cached_token_expires_at=integration.access_token_expires_at,
         )
@@ -57,7 +64,7 @@ class IikoSyncService:
             if not integration.organization_id:
                 orgs = await client.organizations()
                 if not orgs:
-                    raise IikoIntegrationError("iiko returned no organizations for apiLogin")
+                    raise IikoIntegrationError("iiko returned no organizations for this apiKey")
                 integration.organization_id = orgs[0]["id"]
             start_revision = integration.last_menu_revision or 0
             data = await client.nomenclature(
@@ -122,7 +129,7 @@ class IikoSyncService:
             if not integration.organization_id:
                 orgs = await client.organizations()
                 if not orgs:
-                    raise IikoIntegrationError("iiko returned no organizations for apiLogin")
+                    raise IikoIntegrationError("iiko returned no organizations for this apiKey")
                 integration.organization_id = orgs[0]["id"]
 
             max_revision, order_infos = await client.orders_by_date_range(
@@ -234,7 +241,7 @@ class IikoSyncService:
             if not integration.organization_id:
                 orgs = await client.organizations()
                 if not orgs:
-                    raise IikoIntegrationError("iiko returned no organizations for apiLogin")
+                    raise IikoIntegrationError("iiko returned no organizations for this apiKey")
                 integration.organization_id = orgs[0]["id"]
 
             max_revision, order_infos = await client.orders_by_revision(

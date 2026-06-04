@@ -44,7 +44,9 @@ async def create_integration(
         raise ConflictError("iiko integration already exists for this restaurant")
     integration = IikoIntegration(
         restaurant_id=restaurant.id,
-        api_login=encrypt_str(payload.api_login),
+        api_key=payload.api_key,
+        app_id=payload.app_id,
+        client_secret=encrypt_str(payload.client_secret),
         organization_id=payload.organization_id,
     )
     session.add(integration)
@@ -64,9 +66,14 @@ async def update_integration(
     if not integration:
         raise NotFoundError("iiko integration is not configured")
     data = payload.model_dump(exclude_unset=True)
-    if "api_login" in data and data["api_login"] is not None:
-        data["api_login"] = encrypt_str(data["api_login"])
-        # Token cache is no longer valid.
+    # Encrypt client_secret if it's being updated; any credential change
+    # invalidates the cached token.
+    creds_changed = bool(
+        {"api_key", "app_id", "client_secret"} & {k for k, v in data.items() if v is not None}
+    )
+    if data.get("client_secret") is not None:
+        data["client_secret"] = encrypt_str(data["client_secret"])
+    if creds_changed:
         integration.access_token = None
         integration.access_token_expires_at = None
     for k, v in data.items():

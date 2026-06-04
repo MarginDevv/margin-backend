@@ -53,7 +53,9 @@ class Settings(BaseSettings):
     celery_result_backend: str | None = None
 
     # iikoCloud
-    iiko_api_base_url: str = "https://api-ru.iiko.services/api/1"
+    # Bare host — IikoClient prefixes each request with the per-endpoint
+    # API version (/api/1 or /api/v2; see app/services/iiko/client.py).
+    iiko_api_base_url: str = "https://api-ru.iiko.services"
     iiko_token_ttl_seconds: int = 3300
     iiko_http_timeout: int = 30
     iiko_retry_attempts: int = 4

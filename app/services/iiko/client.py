@@ -4,28 +4,39 @@ Docs: https://api-ru.iiko.services/docs (the OpenAPI spec is also vendored
 under ``docs/iiko_openapi.json`` so we can sanity-check field names
 without going to the internet).
 
-Endpoints we use (POST, JSON; base_url already includes ``/api/1``):
+Endpoints we use (POST, JSON). Paths include the API-version prefix
+because iiko mixes ``/api/1`` and ``/api/v2`` in the same host::
 
-    /access_token                              — issue token (TTL ~1h, deprecated;
-                                                 /api/v2/access_token is the
-                                                 modern replacement, migration TODO)
-    /organizations                             — list orgs available for apiLogin
-    /nomenclature                              — menu (revision-based delta sync)
-    /deliveries/by_delivery_date_and_status    — orders by date range; despite
-                                                 the URL it returns dine-in
-                                                 (Common), pickup and courier
-                                                 deliveries alike
-    /deliveries/by_revision                    — orders incremental sync via
-                                                 startRevision; cheaper than
-                                                 date range, but max 3-hour
-                                                 offset from current maxRevision
+    /api/v2/access_token                           — issue session token.
+                                                     Authenticates with the
+                                                     apiKey + appId +
+                                                     clientSecret triple
+                                                     (the legacy
+                                                     /api/1/access_token is
+                                                     deprecated)
+    /api/1/organizations                           — list orgs available for
+                                                     the apiKey
+    /api/1/nomenclature                            — menu (revision-based
+                                                     delta sync)
+    /api/1/deliveries/by_delivery_date_and_status  — orders by date range;
+                                                     despite the URL it
+                                                     returns dine-in
+                                                     (Common), pickup and
+                                                     courier deliveries alike
+    /api/1/deliveries/by_revision                  — orders incremental sync
+                                                     via startRevision;
+                                                     cheaper than date
+                                                     range, but max 3-hour
+                                                     offset from current
+                                                     maxRevision
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, tzinfo
+from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Any
 
 import httpx
+from jose import jwt
 from tenacity import (
     AsyncRetrying,
     retry_if_exception_type,
@@ -39,18 +50,24 @@ from app.core.logging import get_logger
 
 logger = get_logger("iiko.client")
 
+ACCESS_TOKEN_PATH = "/api/v2/access_token"
+
 
 class IikoClient:
     """Async iikoCloud client with token caching and retry."""
 
     def __init__(
         self,
-        api_login: str,
         *,
+        api_key: str,
+        app_id: str,
+        client_secret: str,
         cached_token: str | None = None,
         cached_token_expires_at: datetime | None = None,
     ) -> None:
-        self._api_login = api_login
+        self._api_key = api_key
+        self._app_id = app_id
+        self._client_secret = client_secret
         self._token: str | None = cached_token
         self._token_expires_at: datetime | None = cached_token_expires_at
         self._client = httpx.AsyncClient(
@@ -79,11 +96,11 @@ class IikoClient:
     # ----- HTTP plumbing -----
 
     async def _request(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        if path != "/access_token":
+        if path != ACCESS_TOKEN_PATH:
             await self._ensure_token()
 
         headers: dict[str, str] = {}
-        if self._token and path != "/access_token":
+        if self._token and path != ACCESS_TOKEN_PATH:
             headers["Authorization"] = f"Bearer {self._token}"
 
         retryer = AsyncRetrying(
@@ -96,7 +113,7 @@ class IikoClient:
         async for attempt in retryer:
             with attempt:
                 response = await self._client.post(path, json=payload, headers=headers)
-                if response.status_code == 401 and path != "/access_token":
+                if response.status_code == 401 and path != ACCESS_TOKEN_PATH:
                     # Token may have been revoked — re-issue once and retry.
                     self._token = None
                     self._token_expires_at = None
@@ -120,7 +137,6 @@ class IikoClient:
         raise IikoIntegrationError(f"iiko {path} exhausted retries")
 
     async def _ensure_token(self) -> None:
-        from datetime import UTC
         now = datetime.now(UTC)
         if (
             self._token
@@ -128,18 +144,27 @@ class IikoClient:
             and self._token_expires_at - timedelta(seconds=60) > now
         ):
             return
-        data = await self._request("/access_token", {"apiLogin": self._api_login})
+        data = await self._request(
+            ACCESS_TOKEN_PATH,
+            {
+                "apiKey": self._api_key,
+                "appId": self._app_id,
+                "clientSecret": self._client_secret,
+            },
+        )
         token = data.get("token")
         if not token:
             raise IikoIntegrationError("iiko access_token response missing 'token'")
         self._token = token
-        self._token_expires_at = now + timedelta(seconds=settings.iiko_token_ttl_seconds)
+        self._token_expires_at = _decode_jwt_exp(token) or (
+            now + timedelta(seconds=settings.iiko_token_ttl_seconds)
+        )
         logger.info("iiko.token.issued", expires_at=self._token_expires_at.isoformat())
 
     # ----- Domain methods -----
 
     async def organizations(self) -> list[dict[str, Any]]:
-        data = await self._request("/organizations", {})
+        data = await self._request("/api/1/organizations", {})
         return data.get("organizations", [])
 
     async def nomenclature(
@@ -155,7 +180,7 @@ class IikoClient:
         changed.
         """
         return await self._request(
-            "/nomenclature",
+            "/api/1/nomenclature",
             {"organizationId": organization_id, "startRevision": start_revision},
         )
 
@@ -194,7 +219,7 @@ class IikoClient:
         if statuses:
             payload["statuses"] = statuses
         data = await self._request(
-            "/deliveries/by_delivery_date_and_status", payload
+            "/api/1/deliveries/by_delivery_date_and_status", payload
         )
         return _extract_orders(data)
 
@@ -210,7 +235,7 @@ class IikoClient:
         back to :meth:`orders_by_date_range`.
         """
         data = await self._request(
-            "/deliveries/by_revision",
+            "/api/1/deliveries/by_revision",
             {"organizationIds": organization_ids, "startRevision": start_revision},
         )
         return _extract_orders(data)
@@ -225,6 +250,27 @@ def _extract_orders(data: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
     for org_block in data.get("ordersByOrganizations") or []:
         orders.extend(org_block.get("orders") or [])
     return max_revision, orders
+
+
+def _decode_jwt_exp(token: str) -> datetime | None:
+    """Read the ``exp`` claim from an iiko v2 JWT.
+
+    iiko signs the token but doesn't publish the verification key, so we
+    decode without signature verification — we only care about reading
+    the real expiration to avoid the fragile hard-coded TTL fallback.
+    Returns ``None`` if the token isn't a valid JWT or has no usable
+    ``exp`` claim.
+    """
+    try:
+        claims = jwt.get_unverified_claims(token)
+    except Exception:  # pylint: disable=broad-exception-caught
+        # The token may not be a JWT (older v1 responses) or may be
+        # malformed; either way, fall back to the configured TTL.
+        return None
+    exp = claims.get("exp")
+    if not isinstance(exp, int | float):
+        return None
+    return datetime.fromtimestamp(int(exp), tz=UTC)
 
 
 class IikoTransientError(Exception):

@@ -29,8 +29,16 @@ class IikoIntegration(TimestampedBase):
     # Organization ID inside iiko (one integration → primary organization).
     organization_id: Mapped[str | None] = mapped_column(String(64), index=True)
 
-    # iikoCloud API login (apiLogin) — secret, stored as-is for now (encrypt before prod).
-    api_login: Mapped[str] = mapped_column(String(255), nullable=False)
+    # /api/v2/access_token credentials. All three are issued together:
+    #   api_key       — generated in iikoWeb under "Integrations → API Keys".
+    #   app_id        — UUID issued by the iiko Developer Portal at app creation.
+    #   client_secret — secret shown only once at portal-app creation time.
+    # Nullable at the DB layer to keep migration 0009 reversible; the sync
+    # service raises IikoIntegrationError if any is missing at call time.
+    # client_secret is stored encrypted (app.utils.crypto.encrypt_str).
+    api_key: Mapped[str | None] = mapped_column(String(255))
+    app_id: Mapped[str | None] = mapped_column(String(64))
+    client_secret: Mapped[str | None] = mapped_column(String(512))
 
     # Cached access token + its expiry.
     access_token: Mapped[str | None] = mapped_column(String(512))
