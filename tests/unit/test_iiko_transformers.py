@@ -152,15 +152,41 @@ def test_sales_doc_computes_profit() -> None:
     assert order_row["profit"] == Decimal("740")
 
 
-def test_sales_doc_maps_bill_status_to_new() -> None:
-    """``Bill`` means receipt printed but not yet paid; for analytics it's
-    still an open ticket, same as ``New``."""
+def test_sales_doc_maps_bill_to_in_progress() -> None:
+    """``Bill`` means receipt printed but cheque still open — surfaced as
+    a distinct status so dashboards can show «awaiting payment»."""
     from app.services.iiko.transformers import sales_doc_to_order
 
     info = _order_info(status="Bill", when_closed=None,
                        items=[_product_item()])
     order_row, _ = sales_doc_to_order(uuid.uuid4(), info, menu_lookup={})
-    assert order_row["status"].value == "new"
+    assert order_row["status"].value == "in_progress"
+
+
+def test_sales_doc_default_service_type_is_common() -> None:
+    """Dine-in is the implicit default when iiko doesn't tag the order."""
+    from app.services.iiko.transformers import sales_doc_to_order
+
+    info = _order_info(items=[_product_item()])
+    order_row, _ = sales_doc_to_order(uuid.uuid4(), info, menu_lookup={})
+    assert order_row["service_type"].value == "common"
+
+
+def test_sales_doc_maps_delivery_service_types() -> None:
+    from app.services.iiko.transformers import sales_doc_to_order
+
+    cases = {
+        "Common": "common",
+        "DeliveryByCourier": "delivery_by_courier",
+        "DeliveryByClient": "delivery_by_client",
+    }
+    for iiko_value, expected in cases.items():
+        info = _order_info(items=[_product_item()])
+        info["order"]["orderServiceType"] = iiko_value
+        order_row, _ = sales_doc_to_order(uuid.uuid4(), info, menu_lookup={})
+        assert order_row["service_type"].value == expected, (
+            f"{iiko_value} → {order_row['service_type'].value} (expected {expected})"
+        )
 
 
 def test_sales_doc_uses_cancel_info_not_status_for_cancellation() -> None:

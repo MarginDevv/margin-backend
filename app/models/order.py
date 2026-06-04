@@ -22,9 +22,17 @@ if TYPE_CHECKING:
 
 class OrderStatus(str, enum.Enum):
     NEW = "new"
+    IN_PROGRESS = "in_progress"   # iiko 'Bill' — receipt printed, awaiting payment
     CLOSED = "closed"
     CANCELED = "canceled"
     DELETED = "deleted"
+
+
+class OrderServiceType(str, enum.Enum):
+    """iiko orderServiceType — dine-in vs delivery flavours."""
+    COMMON = "common"                       # dine-in / table service
+    DELIVERY_BY_COURIER = "delivery_by_courier"
+    DELIVERY_BY_CLIENT = "delivery_by_client"  # pickup
 
 
 class Order(TimestampedBase, RestaurantMixin):
@@ -42,6 +50,17 @@ class Order(TimestampedBase, RestaurantMixin):
         SqlEnum(OrderStatus, name="order_status", values_callable=lambda e: [m.value for m in e]),
         default=OrderStatus.NEW,
         nullable=False,
+    )
+    # iiko's orderServiceType discriminator (dine-in / pickup / courier). Lets
+    # the dashboard filter "hall vs delivery" without re-parsing the payload.
+    service_type: Mapped[OrderServiceType] = mapped_column(
+        SqlEnum(
+            OrderServiceType, name="order_service_type",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        default=OrderServiceType.COMMON,
+        nullable=False,
+        index=True,
     )
 
     guests_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

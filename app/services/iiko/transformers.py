@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any
 
 from app.models.menu_item import MenuItem
-from app.models.order import OrderStatus
+from app.models.order import OrderServiceType, OrderStatus
 
 # --- nomenclature -> menu_items rows ---
 
@@ -73,13 +73,21 @@ def nomenclature_to_menu_rows(
 
 
 # Order.status only has four values in the spec; cancellation is signalled
-# by ``cancelInfo`` being non-null, not by a separate status string. Map
-# ``Bill`` to NEW because for analytics it's still an open ticket.
+# by ``cancelInfo`` being non-null, not by a separate status string. ``Bill``
+# means the receipt is printed but the cheque is still open — surfaced as
+# IN_PROGRESS so dashboards can show «awaiting payment» distinct from
+# brand-new tickets.
 _STATUS_MAP: dict[str, OrderStatus] = {
     "New": OrderStatus.NEW,
-    "Bill": OrderStatus.NEW,
+    "Bill": OrderStatus.IN_PROGRESS,
     "Closed": OrderStatus.CLOSED,
     "Deleted": OrderStatus.DELETED,
+}
+
+_SERVICE_TYPE_MAP: dict[str, OrderServiceType] = {
+    "Common": OrderServiceType.COMMON,
+    "DeliveryByCourier": OrderServiceType.DELIVERY_BY_COURIER,
+    "DeliveryByClient": OrderServiceType.DELIVERY_BY_CLIENT,
 }
 
 
@@ -157,6 +165,9 @@ def sales_doc_to_order(
         "opened_at": opened_at or closed_at,
         "closed_at": closed_at,
         "status": status,
+        "service_type": _SERVICE_TYPE_MAP.get(
+            order_data.get("orderServiceType") or "", OrderServiceType.COMMON
+        ),
         "guests_count": int((order_data.get("guestsInfo") or {}).get("count") or 0),
         "waiter_name": operator.get("name"),
         "gross_revenue": total_gross,
