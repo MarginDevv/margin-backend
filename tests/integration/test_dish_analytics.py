@@ -15,9 +15,8 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 @pytest.fixture
 async def session():
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
     from app.models import Base
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:

@@ -10,9 +10,9 @@ from app.services.llm.factory import get_llm
 
 __all__ = [
     "LLMClient",
+    "LLMError",
     "LLMMessage",
     "LLMResponse",
-    "LLMError",
     "NoOpLLM",
     "get_llm",
 ]

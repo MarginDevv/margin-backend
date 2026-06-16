@@ -14,7 +14,7 @@ from app.repositories.base import BaseRepository
 class ReportRepository(BaseRepository[Report]):
     model = Report
 
-    async def get(
+    async def get_for_period(
         self, restaurant_id: uuid.UUID, period: ReportPeriod, period_start: date
     ) -> Report | None:
         stmt = select(Report).where(

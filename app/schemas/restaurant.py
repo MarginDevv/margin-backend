@@ -58,7 +58,7 @@ class RestaurantCreate(ORMModel):
 
     @field_validator("working_hours")
     @classmethod
-    def _v_hours(cls, value):  # noqa: ANN001 ANN201
+    def _v_hours(cls, value):
         return _validate_working_hours(value)
 
 
@@ -73,7 +73,7 @@ class RestaurantUpdate(ORMModel):
 
     @field_validator("working_hours")
     @classmethod
-    def _v_hours(cls, value):  # noqa: ANN001 ANN201
+    def _v_hours(cls, value):
         return _validate_working_hours(value)
 
 

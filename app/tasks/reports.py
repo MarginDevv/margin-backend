@@ -104,7 +104,7 @@ def sync_day_then_build_daily(self, restaurant_id: str, for_date_iso: str) -> st
             day=day.isoformat(),
             error=str(exc),
         )
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
 @celery_app.task(name="app.tasks.reports.build_daily_reports_all")

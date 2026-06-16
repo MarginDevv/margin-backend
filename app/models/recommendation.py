@@ -7,13 +7,13 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, Integer, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.types import JsonB
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -76,6 +76,6 @@ class Recommendation(TimestampedBase):
     action: Mapped[str | None] = mapped_column(Text)
     estimated_uplift: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     confidence: Mapped[int] = mapped_column(Integer, default=70, nullable=False)
-    payload: Mapped[dict | None] = mapped_column(JSONB)
+    payload: Mapped[dict | None] = mapped_column(JsonB)
 
     restaurant: Mapped["Restaurant"] = relationship(back_populates="recommendations")

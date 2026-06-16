@@ -160,7 +160,7 @@ class OrderRepository(BaseRepository[Order]):
         sort_by ∈ {qty, revenue, cost, profit, margin_percent}
         direction ∈ {asc, desc}
         """
-        SORT_COLUMNS = {
+        sort_columns = {
             "qty": func.sum(OrderItem.quantity),
             "quantity": func.sum(OrderItem.quantity),
             "revenue": func.sum(OrderItem.line_revenue),
@@ -169,7 +169,7 @@ class OrderRepository(BaseRepository[Order]):
             # margin_percent is computed below — fall back to profit ordering and
             # re-sort in Python.
         }
-        sort_expr = SORT_COLUMNS.get(sort_by, SORT_COLUMNS["profit"])
+        sort_expr = sort_columns.get(sort_by, sort_columns["profit"])
         order = sort_expr.asc() if direction == "asc" else sort_expr.desc()
 
         stmt = (

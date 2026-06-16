@@ -24,7 +24,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     configure_logging()
-    app = FastAPI(
+    application = FastAPI(
         title="Margin API",
         version="0.1.0",
         description="AI-manager for restaurants. iikoCloud integration + analytics + recommendations.",
@@ -35,7 +35,7 @@ def create_app() -> FastAPI:
     )
 
     if settings.cors_origins:
-        app.add_middleware(
+        application.add_middleware(
             CORSMiddleware,
             allow_origins=settings.cors_origins,
             allow_credentials=True,
@@ -43,14 +43,14 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
-    register_exception_handlers(app)
-    app.include_router(api_router, prefix="/api/v1")
+    register_exception_handlers(application)
+    application.include_router(api_router, prefix="/api/v1")
 
-    @app.get("/health", tags=["health"])
+    @application.get("/health", tags=["health"])
     async def health() -> dict[str, str]:
         return {"status": "ok", "env": settings.app_env}
 
-    return app
+    return application
 
 
 app = create_app()

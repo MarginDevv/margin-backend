@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, ClassVar
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -18,7 +18,7 @@ from app.core.config import settings
 class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
 
-    metadata_naming_convention: dict[str, str] = {
+    metadata_naming_convention: ClassVar[dict[str, str]] = {
         "ix": "ix_%(column_0_label)s",
         "uq": "uq_%(table_name)s_%(column_0_name)s",
         "ck": "ck_%(table_name)s_%(constraint_name)s",
@@ -28,13 +28,13 @@ class Base(DeclarativeBase):
 
 
 def _create_engine() -> AsyncEngine:
-    return create_async_engine(
-        settings.sqlalchemy_database_uri,
-        echo=settings.app_debug,
-        pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
-    )
+    uri = settings.sqlalchemy_database_uri
+    kwargs: dict[str, Any] = {"echo": settings.app_debug}
+    # Connection pooling kwargs are PG-only; sqlite (tests) uses StaticPool
+    # which rejects them.
+    if not uri.startswith("sqlite"):
+        kwargs.update(pool_pre_ping=True, pool_size=10, max_overflow=20)
+    return create_async_engine(uri, **kwargs)
 
 
 engine: AsyncEngine = _create_engine()
@@ -56,4 +56,4 @@ async def get_db() -> AsyncIterator[AsyncSession]:
             raise
 
 
-__all__ = ["Base", "engine", "AsyncSessionLocal", "get_db", "MappedAsDataclass", "Any"]
+__all__ = ["Any", "AsyncSessionLocal", "Base", "MappedAsDataclass", "engine", "get_db"]

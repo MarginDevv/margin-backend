@@ -15,9 +15,8 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 @pytest.fixture
 async def session():
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
     from app.models import Base
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
@@ -131,7 +130,7 @@ async def test_dish_pairs_returns_pizza_cola_top(session) -> None:
     restaurant = Restaurant(name="T")
     session.add(restaurant)
     await session.flush()
-    ids = await _seed(session, restaurant.id)
+    await _seed(session, restaurant.id)
 
     repo = OrderRepository(session)
     start = datetime(2026, 6, 1, tzinfo=UTC)

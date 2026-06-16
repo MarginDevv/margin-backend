@@ -73,7 +73,7 @@ async def telegram_update(
 
     try:
         payload = await request.json()
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("telegram.webhook.bad_json")
         raise HTTPException(status_code=400, detail="invalid json") from None
 

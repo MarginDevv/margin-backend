@@ -7,13 +7,13 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, UniqueConstraint
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, Integer, Numeric, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.types import JsonB
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -57,6 +57,6 @@ class Report(TimestampedBase):
     margin_percent: Mapped[Decimal] = mapped_column(Numeric(7, 4), default=Decimal("0"), nullable=False)
 
     # Free-form breakdowns (top dishes, by-hour, by-day-of-week, etc.).
-    breakdown: Mapped[dict | None] = mapped_column(JSONB)
+    breakdown: Mapped[dict | None] = mapped_column(JsonB)
 
     restaurant: Mapped["Restaurant"] = relationship(back_populates="reports")

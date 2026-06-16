@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     activity,
     analytics,
     auth,
+    billing,
     integrations,
     menu,
     recommendations,
@@ -66,4 +67,9 @@ api_router.include_router(
     referral.router,
     prefix="/users/me/referral",
     tags=["referral"],
+)
+api_router.include_router(
+    billing.router,
+    prefix="/billing",
+    tags=["billing"],
 )

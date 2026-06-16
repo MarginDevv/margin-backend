@@ -1,9 +1,7 @@
 """Telegram link/unlink and per-restaurant subscription endpoints."""
 from __future__ import annotations
 
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
 from app.core.dependencies import (
     CurrentUser,
@@ -11,7 +9,6 @@ from app.core.dependencies import (
     RestaurantContext,
 )
 from app.core.exceptions import NotFoundError
-from app.models.restaurant import Restaurant
 from app.schemas.telegram import (
     NotificationsRead,
     NotificationsUpdate,

@@ -208,7 +208,7 @@ class AnalyticsService:
         from app.schemas.analytics import KpiComparison
 
         current = await self.kpi(restaurant, start, end)
-        span = (end - start)  # timedelta in days
+        span = end - start  # timedelta in days
         prev_end = start - timedelta(days=1)
         prev_start = prev_end - span
         previous = await self.kpi(restaurant, prev_start, prev_end)

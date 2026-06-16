@@ -26,7 +26,7 @@ def incremental_sync_restaurant(self, restaurant_id: str) -> int:
         return run_async(with_session(_job))
     except Exception as exc:
         logger.error("iiko.incremental.failed", restaurant_id=restaurant_id, error=str(exc))
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
 
 @celery_app.task(name="app.tasks.iiko_sync.full_sync_restaurant", bind=True, max_retries=3)
@@ -50,7 +50,7 @@ def full_sync_restaurant(self, restaurant_id: str) -> int:
             start_utc, end_utc = day_bounds_local(yesterday.date(), tz)
             try:
                 await svc.sync_writeoffs(rid, start_utc, end_utc)
-            except Exception as wexc:  # noqa: BLE001
+            except Exception as wexc:
                 logger.warning(
                     "iiko.writeoffs.skip",
                     restaurant_id=restaurant_id,
@@ -62,7 +62,7 @@ def full_sync_restaurant(self, restaurant_id: str) -> int:
         return run_async(with_session(_job))
     except Exception as exc:
         logger.error("iiko.full.failed", restaurant_id=restaurant_id, error=str(exc))
-        raise self.retry(exc=exc, countdown=120 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=120 * (self.request.retries + 1)) from exc
 
 
 @celery_app.task(name="app.tasks.iiko_sync.incremental_sync_all")

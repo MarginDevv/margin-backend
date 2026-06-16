@@ -225,10 +225,11 @@ class IikoSyncService:
         if not integration:
             raise NotFoundError("iiko integration is not configured")
         to = now_utc()
-        if integration.last_sync_at:
-            frm = integration.last_sync_at - timedelta(minutes=10)
-        else:
-            frm = to - timedelta(hours=24)
+        frm = (
+            integration.last_sync_at - timedelta(minutes=10)
+            if integration.last_sync_at
+            else to - timedelta(hours=24)
+        )
         # Hard floor: never look back further than `window_minutes` for incremental.
         floor = to - timedelta(minutes=window_minutes)
         if frm < floor and integration.last_sync_at:

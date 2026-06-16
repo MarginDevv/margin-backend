@@ -29,7 +29,7 @@ from app.services.llm.base import LLMError, LLMMessage, LLMResponse
 logger = get_logger("llm.yandex")
 
 
-class _Transient(Exception):
+class _TransientError(Exception):
     pass
 
 
@@ -90,7 +90,7 @@ class YandexGPTClient:
         retryer = AsyncRetrying(
             stop=stop_after_attempt(3),
             wait=wait_exponential(multiplier=1, min=1, max=10),
-            retry=retry_if_exception_type((httpx.TransportError, _Transient)),
+            retry=retry_if_exception_type((httpx.TransportError, _TransientError)),
             reraise=True,
         )
         async for attempt in retryer:
@@ -101,7 +101,7 @@ class YandexGPTClient:
                     json=payload,
                 )
                 if response.status_code == 429 or 500 <= response.status_code < 600:
-                    raise _Transient(
+                    raise _TransientError(
                         f"yandex {response.status_code}: {response.text[:300]}"
                     )
                 if response.status_code >= 400:

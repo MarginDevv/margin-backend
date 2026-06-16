@@ -45,17 +45,72 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
 src = ["app", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF", "ASYNC"]
-ignore = ["B008", "N805"]
+# B008: FastAPI/Pydantic patterns rely on default-arg expressions.
+# N805: pydantic validators use `cls` as first arg.
+# RUF001/2/3: ambiguous Cyrillic glyphs are intentional (Russian UI strings).
+# UP037: keep PEP 563 quoted annotations explicit where we need them.
+# UP042: SqlEnum(str, enum.Enum) is the documented SA pattern.
+ignore = ["B008", "N805", "RUF001", "RUF002", "RUF003", "UP037", "UP042"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/*" = ["E501"]
-"tests/*" = ["B011"]
+"tests/*" = ["B011", "E501", "N806"]
+
+[tool.pylint.main]
+ignore-paths = ["alembic"]
+load-plugins = []
+jobs = 0
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint."messages control"]
+# Conventions for this codebase:
+# - We rely on type hints and FastAPI/Pydantic auto-docs instead of inline docstrings.
+# - SQLAlchemy 2.0 ORM models and Pydantic schemas naturally have few public methods.
+# - FastAPI endpoints and analytics queries take many keyword args by design.
+# - Lazy imports inside functions break circular deps and speed startup.
+# - We catch broad Exception in Celery wrappers and webhook handlers on purpose.
+# - Duplicate-code triggers on similar SQLAlchemy column declarations across models.
+disable = [
+    "missing-module-docstring",
+    "missing-function-docstring",
+    "missing-class-docstring",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "too-many-locals",
+    "too-many-instance-attributes",
+    "too-many-statements",
+    "too-many-branches",
+    "too-many-return-statements",
+    "import-outside-toplevel",
+    "broad-exception-caught",
+    "broad-exception-raised",
+    "duplicate-code",
+    "protected-access",
+    "fixme",
+    # SQLAlchemy 2.0 `func.*` namespace is dynamic; pylint can't introspect it.
+    "not-callable",
+    # pydantic-settings exposes `Field(...)` defaults that pylint mistakes for
+    # FieldInfo instances at the class level.
+    "no-member",
+    # Module-level globals like `_bot`, `AsyncSessionLocal` follow SA / FastAPI
+    # conventions — they're not true constants.
+    "invalid-name",
+    "global-statement",
+]
+
+[tool.pylint.design]
+max-args = 12
+max-attributes = 20
+max-locals = 25
 
 [tool.mypy]
 python_version = "3.11"

@@ -4,19 +4,17 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, ForeignKey, Numeric
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
 
 if TYPE_CHECKING:
-    from decimal import Decimal
-
     from app.models.restaurant import Restaurant
 
 
@@ -55,7 +53,7 @@ class Subscription(TimestampedBase):
         nullable=False,
         default=SubscriptionStatus.TRIAL,
     )
-    price: Mapped["Decimal | None"] = mapped_column(Numeric(12, 2))
+    price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     current_period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

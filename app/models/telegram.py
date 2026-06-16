@@ -6,13 +6,13 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import BigInteger, DateTime
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.types import JsonB
 
 if TYPE_CHECKING:
     from app.models.restaurant import Restaurant
@@ -75,7 +75,7 @@ class TelegramDelivery(TimestampedBase):
     telegram_message_id: Mapped[int | None] = mapped_column(BigInteger)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None] = mapped_column(String(1024))
-    payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JsonB)
 
     restaurant: Mapped["Restaurant"] = relationship()
     user: Mapped["User"] = relationship()

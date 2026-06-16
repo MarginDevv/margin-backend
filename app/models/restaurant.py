@@ -1,15 +1,15 @@
 """Restaurant (tenant) model."""
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING
 
-import uuid
-
 from sqlalchemy import Boolean, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TimestampedBase
+from app.models.types import JsonB
 
 if TYPE_CHECKING:
     from app.models.iiko_integration import IikoIntegration
@@ -33,7 +33,7 @@ class Restaurant(TimestampedBase):
     # Working hours: { "mon": {"open": "10:00", "close": "23:00"}, ... }
     # close < open means the business day spans midnight (e.g., 18:00-02:00).
     # A weekday absent or set to null means the restaurant is closed that day.
-    working_hours: Mapped[dict | None] = mapped_column(JSONB)
+    working_hours: Mapped[dict | None] = mapped_column(JsonB)
     # Minutes after closing time to build the daily report.
     report_delay_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
 

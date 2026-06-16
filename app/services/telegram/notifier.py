@@ -105,7 +105,7 @@ class TelegramNotifier:
         if not restaurant:
             raise NotFoundError("Restaurant not found")
 
-        report = await ReportRepository(self.session).get(
+        report = await ReportRepository(self.session).get_for_period(
             restaurant_id, ReportPeriod.DAILY, for_date
         )
         if not report:
@@ -159,7 +159,7 @@ class TelegramNotifier:
                     compare.current.avg_check, prev_kpi.avg_check
                 ),
             }
-        except Exception:  # noqa: BLE001
+        except Exception:
             # Comparison is a nice-to-have; never block the digest because of it.
             deltas = None
 
@@ -286,4 +286,4 @@ class TelegramNotifier:
                 UserRestaurantRole.telegram_notifications.is_(True),
             )
         )
-        return [(u, m) for u, m in (await self.session.execute(stmt)).all()]
+        return list((await self.session.execute(stmt)).all())

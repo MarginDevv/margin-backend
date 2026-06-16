@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import os
-import uuid
-from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -15,9 +13,8 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 @pytest.fixture
 async def session():
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
     from app.models import Base
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
@@ -42,8 +39,6 @@ async def test_heatmap_returns_one_cell_per_unique_weekday_hour(session) -> None
     await session.flush()
 
     repo = OrderRepository(session)
-    start = datetime(2026, 6, 1, tzinfo=UTC)
-    end = datetime(2026, 6, 8, tzinfo=UTC)
     # Don't try to run on sqlite — the timezone() function does not exist
     # there. Just check that the method exists and is callable.
     assert hasattr(repo, "heatmap_weekday_hour")
@@ -52,8 +47,9 @@ async def test_heatmap_returns_one_cell_per_unique_weekday_hour(session) -> None
 
 def test_heatmap_metric_column_mapping() -> None:
     """The schema must accept the three documented metric names."""
-    from app.schemas.analytics import Heatmap, HeatmapCell
     from datetime import date
+
+    from app.schemas.analytics import Heatmap, HeatmapCell
 
     cells = [
         HeatmapCell(weekday=0, hour=14, value=Decimal("1000"), orders_count=3),

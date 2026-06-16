@@ -6,8 +6,8 @@ opens its own AsyncSession, mirroring the FastAPI side.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import date, timedelta
-from typing import Awaitable, Callable
 
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
@@ -102,7 +102,7 @@ async def on_start_with_token(message: Message, command: CommandObject) -> None:
                 chat_id=message.chat.id,
                 telegram_username=message.from_user.username if message.from_user else None,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("telegram.link.failed", error=str(exc))
             await message.answer(render_link_token_invalid())
             return
@@ -203,7 +203,7 @@ async def _reply_with_report(
     if not restaurant:
         await message.answer("Ресторан не найден.")
         return
-    report = await ReportRepository(session).get(
+    report = await ReportRepository(session).get_for_period(
         restaurant_id, ReportPeriod.DAILY, day
     )
     if not report:

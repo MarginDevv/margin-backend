@@ -69,7 +69,6 @@ class IikoClient:
     # ----- HTTP plumbing -----
 
     async def _request(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        from datetime import UTC
         if path != "/access_token":
             await self._ensure_token()
 

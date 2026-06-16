@@ -32,7 +32,7 @@ async def get_daily(
     session: DbSession,
     for_date: date = Query(...),
 ) -> ReportRead:
-    report = await ReportRepository(session).get(restaurant.id, ReportPeriod.DAILY, for_date)
+    report = await ReportRepository(session).get_for_period(restaurant.id, ReportPeriod.DAILY, for_date)
     if not report:
         raise NotFoundError("Daily report not found for this date")
     return ReportRead.model_validate(report)
@@ -44,7 +44,7 @@ async def get_weekly(
     session: DbSession,
     week_start: date = Query(..., description="Monday of the target ISO week"),
 ) -> ReportRead:
-    report = await ReportRepository(session).get(restaurant.id, ReportPeriod.WEEKLY, week_start)
+    report = await ReportRepository(session).get_for_period(restaurant.id, ReportPeriod.WEEKLY, week_start)
     if not report:
         raise NotFoundError("Weekly report not found for this week")
     return ReportRead.model_validate(report)

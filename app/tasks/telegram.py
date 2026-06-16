@@ -52,4 +52,4 @@ def deliver_daily_digest(self, restaurant_id: str, for_date_iso: str) -> dict:
             for_date=for_date_iso,
             error=str(exc),
         )
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
