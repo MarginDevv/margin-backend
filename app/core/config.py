@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     # Where the verify-email link points on the frontend.
     # Token is appended as ?token=...
     email_verify_url: str = "http://localhost:5173/verify-email"
+    password_reset_url: str = "http://localhost:5173/reset-password"
+    password_reset_ttl_hours: int = 2
 
     # Telegram
     telegram_bot_token: str | None = None

@@ -5,6 +5,7 @@ from app.models.email_token import EmailVerificationToken
 from app.models.iiko_integration import IikoIntegration
 from app.models.menu_item import MenuItem
 from app.models.order import Order, OrderItem
+from app.models.password_reset import PasswordResetToken
 from app.models.recommendation import Recommendation, RecommendationStatus, RecommendationType
 from app.models.referral import PayoutStatus, ReferralPayout
 from app.models.report import Report, ReportPeriod
@@ -26,6 +27,7 @@ __all__ = [
     "MenuItem",
     "Order",
     "OrderItem",
+    "PasswordResetToken",
     "PayoutStatus",
     "Recommendation",
     "RecommendationStatus",
