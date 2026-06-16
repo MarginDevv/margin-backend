@@ -116,6 +116,11 @@ JWT_SECRET_KEY=ВСТАВЬ_СЮДА_ДРУГУЮ_СЛУЧАЙНУЮ_СТРОК�
 
 # --- POSTGRES (придумай надёжный пароль) ---
 POSTGRES_PASSWORD=надёжный_пароль_от_базы
+# Если используешь managed-Postgres от Supabase вместо локального контейнера —
+# скопируй Session Pooler URI из Project Settings → Database, замени схему
+# postgresql:// → postgresql+asyncpg:// и убери ?pgbouncer=true:
+# DATABASE_URL=postgresql+asyncpg://postgres.<ref>:<password>@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
+# Бэкенд ходит ролью `postgres` (BYPASSRLS), миграция 0011 закрывает PostgREST.
 
 # --- TELEGRAM ---
 TELEGRAM_BOT_TOKEN=новый_токен_от_BotFather
