@@ -17,6 +17,7 @@ from app.models.user import User
 from app.models.user_restaurant_role import Role, UserRestaurantRole
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import RegisterRequest, TokenPair
+from app.services.email.verification_service import EmailVerificationService
 from app.services.referral.referral_service import ReferralService
 
 
@@ -64,6 +65,13 @@ class AuthService:
 
         tokens = self._issue_tokens(user)
         await self.session.commit()
+
+        # Fire-and-forget verification email — failure doesn't block registration.
+        import contextlib
+
+        with contextlib.suppress(Exception):
+            await EmailVerificationService(self.session).issue_and_send(user)
+
         return user, restaurant, tokens
 
     async def login(self, email: str, password: str) -> tuple[User, TokenPair]:

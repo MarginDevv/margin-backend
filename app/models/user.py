@@ -21,6 +21,7 @@ class User(TimestampedBase):
     phone: Mapped[str | None] = mapped_column(String(32))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Verified Telegram chat id for outbound notifications. Null = not linked.
     telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, index=True)

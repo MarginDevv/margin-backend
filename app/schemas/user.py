@@ -12,6 +12,7 @@ class UserRead(TimestampedSchema):
     phone: str | None
     is_active: bool
     is_superuser: bool
+    is_email_verified: bool
 
 
 class UserUpdate(ORMModel):

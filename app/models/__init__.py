@@ -1,6 +1,7 @@
 """SQLAlchemy ORM models."""
 from app.models.activity_event import ActivityEvent, ActivityKind, ActivitySeverity
 from app.models.base import Base, TimestampedBase
+from app.models.email_token import EmailVerificationToken
 from app.models.iiko_integration import IikoIntegration
 from app.models.menu_item import MenuItem
 from app.models.order import Order, OrderItem
@@ -20,6 +21,7 @@ __all__ = [
     "ActivitySeverity",
     "Base",
     "DeliveryKind",
+    "EmailVerificationToken",
     "IikoIntegration",
     "MenuItem",
     "Order",

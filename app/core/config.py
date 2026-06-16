@@ -61,6 +61,21 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list[str] = Field(default_factory=list)
 
+    # Email
+    # Backend: "console" prints emails to logs (use for local dev), "smtp" sends real ones.
+    email_backend: Literal["console", "smtp"] = "console"
+    email_from: str = "Margin <noreply@margin.local>"
+    smtp_host: str = "smtp.yandex.ru"
+    smtp_port: int = 465
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    # 'tls' = implicit TLS (port 465), 'starttls' = STARTTLS upgrade (port 587), 'none' = plaintext (dev only).
+    smtp_security: Literal["tls", "starttls", "none"] = "tls"
+    email_verify_ttl_hours: int = 24
+    # Where the verify-email link points on the frontend.
+    # Token is appended as ?token=...
+    email_verify_url: str = "http://localhost:5173/verify-email"
+
     # Telegram
     telegram_bot_token: str | None = None
     telegram_bot_username: str | None = None
